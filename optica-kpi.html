@@ -207,10 +207,6 @@ tr:hover td{background:var(--surface2)}
       <label>Usuario</label>
       <select id="login-user">
         <option value="">Seleccioná tu usuario</option>
-        <option value="admin">Admin (dueño)</option>
-        <option value="paola">Paola</option>
-        <option value="paula">Paula</option>
-        <option value="fernando">Fernando</option>
       </select>
     </div>
     <div class="field">
@@ -410,6 +406,19 @@ function save(key){
 }
 
 // ====== AUTH ======
+function populateLoginUsers(){
+  const sel=document.getElementById('login-user');
+  const current=sel.value;
+  sel.innerHTML='<option value="">Seleccioná tu usuario</option>';
+  Object.entries(USERS).forEach(([u,d])=>{
+    const opt=document.createElement('option');
+    opt.value=u;
+    opt.textContent=d.name+(d.role==='admin'?' (admin)':'');
+    sel.appendChild(opt);
+  });
+  if(current)sel.value=current;
+}
+
 function doLogin(){
   const u=document.getElementById('login-user').value;
   const p=document.getElementById('login-pass').value;
@@ -431,6 +440,7 @@ function doLogin(){
   });
 }
 document.getElementById('login-pass').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin()});
+populateLoginUsers();
 
 function doLogout(){
   unsubscribers.forEach(unsub=>unsub());
@@ -439,8 +449,8 @@ function doLogout(){
   activeTab='';
   document.getElementById('app').style.display='none';
   document.getElementById('login-screen').style.display='flex';
-  document.getElementById('login-user').value='';
   document.getElementById('login-pass').value='';
+  populateLoginUsers();
 }
 
 function refreshCurrentTab(){
