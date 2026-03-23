@@ -283,6 +283,53 @@ tr:hover td{background:var(--surface2)}
   </div>
 </div>
 
+<!-- MODAL USUARIO -->
+<div class="modal-bg" id="modal-usuario">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="modal-usuario-title">Nuevo usuario</span>
+      <button class="modal-close" onclick="closeModal('modal-usuario')">×</button>
+    </div>
+    <div class="form-grid full">
+      <div class="form-group" id="mu-username-group"><label>Usuario (para login, sin espacios)</label><input type="text" id="mu-username" placeholder="ej: maria"></div>
+      <div class="form-group" id="mu-nombre-group"><label>Nombre completo</label><input type="text" id="mu-nombre" placeholder="ej: María García"></div>
+      <div class="form-group" id="mu-rol-group"><label>Rol</label>
+        <select id="mu-rol">
+          <option value="vendedora">Vendedora</option>
+          <option value="produccion">Producción</option>
+          <option value="admin">Admin</option>
+        </select>
+      </div>
+      <div class="form-group"><label id="mu-pass-label">Contraseña</label><input type="password" id="mu-pass" placeholder="••••••"></div>
+      <div class="form-group" id="mu-pass2-group"><label>Repetir contraseña</label><input type="password" id="mu-pass2" placeholder="••••••"></div>
+    </div>
+    <div class="error-msg" id="mu-error"></div>
+    <div style="display:flex;gap:8px;margin-top:1rem;justify-content:flex-end">
+      <button class="btn-secondary" onclick="closeModal('modal-usuario')">Cancelar</button>
+      <button class="btn-save" onclick="guardarUsuario()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL BORRAR DATOS -->
+<div class="modal-bg" id="modal-borrar-datos">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" style="color:var(--coral)">Borrar todos los datos</span>
+      <button class="modal-close" onclick="closeModal('modal-borrar-datos')">×</button>
+    </div>
+    <p style="color:var(--text2);font-size:13px;margin-bottom:1rem">Esta acción eliminará <b>permanentemente</b> todos los registros de ventas, atenciones y producción. No se puede deshacer.</p>
+    <div class="form-group">
+      <label>Escribí <b>BORRAR</b> para confirmar</label>
+      <input type="text" id="borrar-confirm-input" placeholder="BORRAR" autocomplete="off">
+    </div>
+    <div style="display:flex;gap:8px;margin-top:1rem;justify-content:flex-end">
+      <button class="btn-secondary" onclick="closeModal('modal-borrar-datos')">Cancelar</button>
+      <button style="background:var(--coral);color:white;border:none;border-radius:var(--radius);padding:10px 20px;font-family:var(--font-body);font-size:13px;font-weight:500;cursor:pointer" onclick="confirmarBorrarDatos()">Borrar todo</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL CONFIG -->
 <div class="modal-bg" id="modal-config">
   <div class="modal">
@@ -324,12 +371,14 @@ let db = null;
 let unsubscribers = [];
 
 // ====== STATE ======
-const USERS = {
+const DEFAULT_USUARIOS = {
   admin:{pass:'admin123',name:'Admin',role:'admin'},
   paola:{pass:'paola123',name:'Paola',role:'vendedora'},
   paula:{pass:'paula123',name:'Paula',role:'vendedora'},
   fernando:{pass:'fer123',name:'Fernando',role:'produccion'}
 };
+// USERS es mutable: se sincroniza con Firebase y se puede editar desde Config
+let USERS = JSON.parse(localStorage.getItem('kpi_usuarios')||JSON.stringify(DEFAULT_USUARIOS));
 
 let currentUser = null;
 let currentSegId = null;
@@ -350,11 +399,13 @@ function save(key){
       db.collection('data').doc('produccion').set({items:state.produccion}).catch(console.error);
     } else if(key==='marcas'||key==='lentesMarcas'){
       db.collection('data').doc('config').set({marcas:state.marcas,lentesMarcas:state.lentesMarcas}).catch(console.error);
+    } else if(key==='usuarios'){
+      db.collection('data').doc('usuarios').set({usuarios:USERS}).catch(console.error);
     }
   } else {
-    // Fix: 'lentesMarcas' → clave localStorage 'kpi_lentes_marcas' (bug corregido)
     const lsKey = key==='lentesMarcas' ? 'kpi_lentes_marcas' : 'kpi_'+key;
-    localStorage.setItem(lsKey, JSON.stringify(state[key]));
+    const val = key==='usuarios' ? USERS : state[key];
+    localStorage.setItem(lsKey, JSON.stringify(val));
   }
 }
 
@@ -464,14 +515,17 @@ function _setupListeners(onReady){
         lentesMarcas:JSON.parse(localStorage.getItem('kpi_lentes_marcas')||'["Essilor","Zeiss","Hoya","Indo","Rodenstock","Otros"]')
       });
     }
+    const usrSnap=await db.collection('data').doc('usuarios').get();
+    if(!usrSnap.exists||!usrSnap.data().usuarios){
+      await db.collection('data').doc('usuarios').set({usuarios:USERS});
+    }
   }
 
   let readyCount=0;
   function checkReady(){
     readyCount++;
-    if(readyCount===3)onReady();
-    // actualizaciones posteriores → refrescar tab activo
-    else if(readyCount>3)refreshCurrentTab();
+    if(readyCount===4)onReady();
+    else if(readyCount>4)refreshCurrentTab();
   }
 
   migrateIfNeeded().then(()=>{
@@ -488,7 +542,14 @@ function _setupListeners(onReady){
       if(snap.exists){state.marcas=snap.data().marcas||state.marcas;state.lentesMarcas=snap.data().lentesMarcas||state.lentesMarcas;}
       checkReady();
     },console.error);
-    unsubscribers=[u1,u2,u3];
+    const u4=db.collection('data').doc('usuarios').onSnapshot(snap=>{
+      if(snap.exists&&snap.data().usuarios){
+        Object.keys(USERS).forEach(k=>delete USERS[k]);
+        Object.assign(USERS,snap.data().usuarios);
+      }
+      checkReady();
+    },console.error);
+    unsubscribers=[u1,u2,u3,u4];
   }).catch(err=>{console.error('Firestore setup error:',err);onReady();});
 }
 
@@ -1444,7 +1505,22 @@ function renderCharts(){
 }
 
 // ====== CONFIG ======
+const ROLES_LABEL={admin:'Admin',vendedora:'Vendedora',produccion:'Producción'};
+
 function renderConfig(){
+  const usuariosRows=Object.entries(USERS).map(([u,d])=>`
+    <tr>
+      <td><b>${u}</b></td>
+      <td>${d.name}</td>
+      <td><span class="badge ${d.role==='admin'?'badge-blue':d.role==='produccion'?'badge-amber':'badge-green'}">${ROLES_LABEL[d.role]||d.role}</span></td>
+      <td>
+        <div style="display:flex;gap:6px">
+          <button class="seg-btn seg-btn-pres" onclick="openModalCambiarPass('${u}')">Cambiar contraseña</button>
+          ${u===currentUser?'':'<button class="seg-btn seg-btn-lost" onclick="eliminarUsuario(\''+u+'\')">Eliminar</button>'}
+        </div>
+      </td>
+    </tr>`).join('');
+
   return `
 <div class="section-header">
   <div><div class="section-title">Configuración</div></div>
@@ -1460,11 +1536,26 @@ function renderConfig(){
   <div class="add-tag-row"><input id="new-lente-marca" placeholder="Nueva marca..."><button class="btn-add-tag" onclick="addLenteMarca()">Agregar</button></div>
 </div>
 <div class="card">
+  <div class="card-title">Usuarios</div>
+  <div class="table-wrap" style="margin-bottom:1rem">
+    <table>
+      <thead><tr><th>Usuario</th><th>Nombre</th><th>Rol</th><th>Acciones</th></tr></thead>
+      <tbody>${usuariosRows}</tbody>
+    </table>
+  </div>
+  <button class="btn-save" style="font-size:12px;padding:8px 18px" onclick="openModalNuevoUsuario()">+ Agregar usuario</button>
+</div>
+<div class="card">
   <div class="card-title">Exportar datos</div>
   <div style="display:flex;gap:10px;flex-wrap:wrap">
     <button class="btn-secondary" onclick="exportarExcel()">Exportar ventas a Excel</button>
     <button class="btn-secondary" onclick="exportarProduccion()">Exportar producción a Excel</button>
   </div>
+</div>
+<div class="card" style="border-color:var(--coral)">
+  <div class="card-title" style="color:var(--coral)">Zona de peligro</div>
+  <p style="font-size:13px;color:var(--text2);margin-bottom:1rem">Elimina permanentemente todos los registros de ventas, atenciones y producción. Útil para borrar datos de prueba.</p>
+  <button style="background:var(--coral);color:white;border:none;border-radius:var(--radius);padding:9px 20px;font-family:var(--font-body);font-size:13px;font-weight:500;cursor:pointer" onclick="openModal('modal-borrar-datos')">Borrar todos los datos</button>
 </div>`;
 }
 
@@ -1491,6 +1582,88 @@ function addLenteMarca(){
   renderConfigTags();showToast('Marca agregada');
 }
 function removeLenteMarca(i){state.lentesMarcas.splice(i,1);save('lentesMarcas');renderConfigTags()}
+
+// ====== GESTION USUARIOS ======
+let _editingUser=null; // null=nuevo, string=editando contraseña
+
+function openModalNuevoUsuario(){
+  _editingUser=null;
+  document.getElementById('modal-usuario-title').textContent='Nuevo usuario';
+  document.getElementById('mu-username-group').style.display='flex';
+  document.getElementById('mu-nombre-group').style.display='flex';
+  document.getElementById('mu-rol-group').style.display='flex';
+  document.getElementById('mu-pass2-group').style.display='flex';
+  document.getElementById('mu-pass-label').textContent='Contraseña';
+  document.getElementById('mu-username').value='';
+  document.getElementById('mu-nombre').value='';
+  document.getElementById('mu-pass').value='';
+  document.getElementById('mu-pass2').value='';
+  document.getElementById('mu-error').style.display='none';
+  openModal('modal-usuario');
+}
+
+function openModalCambiarPass(username){
+  _editingUser=username;
+  document.getElementById('modal-usuario-title').textContent='Cambiar contraseña — '+USERS[username].name;
+  document.getElementById('mu-username-group').style.display='none';
+  document.getElementById('mu-nombre-group').style.display='none';
+  document.getElementById('mu-rol-group').style.display='none';
+  document.getElementById('mu-pass2-group').style.display='flex';
+  document.getElementById('mu-pass-label').textContent='Nueva contraseña';
+  document.getElementById('mu-pass').value='';
+  document.getElementById('mu-pass2').value='';
+  document.getElementById('mu-error').style.display='none';
+  openModal('modal-usuario');
+}
+
+function guardarUsuario(){
+  const errEl=document.getElementById('mu-error');
+  const pass=document.getElementById('mu-pass').value.trim();
+  const pass2=document.getElementById('mu-pass2').value.trim();
+  if(!pass){errEl.style.display='block';errEl.textContent='Ingresá una contraseña';return}
+  if(pass!==pass2){errEl.style.display='block';errEl.textContent='Las contraseñas no coinciden';return}
+
+  if(_editingUser){
+    USERS[_editingUser].pass=pass;
+  } else {
+    const username=document.getElementById('mu-username').value.trim().toLowerCase().replace(/\s/g,'');
+    const nombre=document.getElementById('mu-nombre').value.trim();
+    const rol=document.getElementById('mu-rol').value;
+    if(!username){errEl.style.display='block';errEl.textContent='Ingresá un nombre de usuario';return}
+    if(!nombre){errEl.style.display='block';errEl.textContent='Ingresá el nombre completo';return}
+    if(USERS[username]){errEl.style.display='block';errEl.textContent='Ese usuario ya existe';return}
+    USERS[username]={pass,name:nombre,role:rol};
+  }
+  save('usuarios');
+  closeModal('modal-usuario');
+  showToast(_editingUser?'Contraseña actualizada':'Usuario creado');
+  goTab('config');
+}
+
+function eliminarUsuario(username){
+  if(username===currentUser){showToast('No podés eliminar tu propio usuario');return}
+  const admins=Object.values(USERS).filter(u=>u.role==='admin');
+  if(USERS[username].role==='admin'&&admins.length<=1){showToast('Debe quedar al menos un admin');return}
+  if(!confirm(`¿Eliminar al usuario "${USERS[username].name}"?`))return;
+  delete USERS[username];
+  save('usuarios');
+  showToast('Usuario eliminado');
+  goTab('config');
+}
+
+// ====== BORRAR TODOS LOS DATOS ======
+function confirmarBorrarDatos(){
+  const val=document.getElementById('borrar-confirm-input').value.trim();
+  if(val!=='BORRAR'){showToast('Escribí BORRAR para confirmar');return}
+  state.atenciones=[];
+  state.produccion=[];
+  save('atenciones');
+  save('produccion');
+  closeModal('modal-borrar-datos');
+  document.getElementById('borrar-confirm-input').value='';
+  showToast('Todos los datos fueron eliminados');
+  goTab('dashboard');
+}
 
 // ====== EXPORT EXCEL ======
 function exportarExcel(){
