@@ -732,6 +732,8 @@ function postRender(id){
   if(id==='config')renderConfigTags();
   if(id==='seguimiento')renderSegItems();
   if(id==='nuevo-trabajo'){
+    itemsProdCount=0;
+    agregarItemProd();
     const sel=document.getElementById('p-error');
     if(sel)sel.onchange=function(){document.getElementById('error-detail').style.display=this.value==='si'?'block':'none'};
   }
@@ -954,6 +956,56 @@ function guardarSeguimiento(){
 }
 
 // ====== PRODUCCION ======
+let itemsProdCount=0;
+
+function trabajoCantidad(d){
+  if(d.items&&d.items.length)return d.items.reduce((s,i)=>s+(i.cantidad||0),0);
+  return d.cantidad||0;
+}
+
+function agregarItemProd(){
+  itemsProdCount++;
+  const id=itemsProdCount;
+  const inStyle='padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:12px;background:var(--bg);font-family:var(--font-body);width:100%';
+  const div=document.createElement('div');
+  div.id=`prod-item-${id}`;
+  div.style.cssText='display:grid;grid-template-columns:1.5fr 1.5fr 1fr auto;gap:8px;align-items:end;margin-bottom:8px';
+  div.innerHTML=`
+    <div class="form-group" style="margin:0"><label style="font-size:10px">Tipo de lente</label>
+      <select id="pi-tipo-${id}" style="${inStyle}">
+        <option value="monofocal">Monofocal</option>
+        <option value="bifocal">Bifocal</option>
+        <option value="multifocal">Multifocal</option>
+        <option value="ocupacional">Ocupacional</option>
+        <option value="organico">Orgánico</option>
+        <option value="policarbonato">Policarbonato</option>
+        <option value="sol">Lentes de sol</option>
+      </select>
+    </div>
+    <div class="form-group" style="margin:0"><label style="font-size:10px">Marca</label>
+      <select id="pi-marca-${id}" style="${inStyle}">
+        ${state.lentesMarcas.map(m=>`<option>${m}</option>`).join('')}
+      </select>
+    </div>
+    <div class="form-group" style="margin:0"><label style="font-size:10px">Pares</label>
+      <input type="number" id="pi-cant-${id}" value="1" min="1" style="${inStyle}">
+    </div>
+    <button type="button" onclick="document.getElementById('prod-item-${id}').remove()" style="padding:8px;background:var(--coral-light);color:var(--coral);border:none;border-radius:var(--radius);cursor:pointer;font-size:14px;line-height:1">×</button>`;
+  document.getElementById('prod-items-lista').appendChild(div);
+}
+
+function recolectarItemsProd(){
+  const items=[];
+  document.querySelectorAll('#prod-items-lista>[id^=prod-item-]').forEach(row=>{
+    const id=row.id.replace('prod-item-','');
+    const tipo=document.getElementById(`pi-tipo-${id}`)?.value;
+    const marca=document.getElementById(`pi-marca-${id}`)?.value||'';
+    const cantidad=parseInt(document.getElementById(`pi-cant-${id}`)?.value)||1;
+    if(tipo)items.push({tipo,marca,cantidad});
+  });
+  return items;
+}
+
 function renderNuevoTrabajo(){
   const hoy=new Date().toISOString().split('T')[0];
   const hora=new Date().toTimeString().slice(0,5);
@@ -963,7 +1015,7 @@ function renderNuevoTrabajo(){
   <div><div class="section-title">Nuevo trabajo</div><div class="section-subtitle">Fernando · ${hoy}</div></div>
 </div>
 <div class="card">
-  <div class="card-title">Datos del trabajo</div>
+  <div class="card-title">Turno y horario</div>
   <div class="form-grid">
     <div class="form-group"><label>Fecha</label><input type="date" id="p-fecha" value="${hoy}"></div>
     <div class="form-group"><label>Turno</label>
@@ -974,25 +1026,20 @@ function renderNuevoTrabajo(){
     </div>
     <div class="form-group"><label>Hora inicio</label><input type="time" id="p-inicio" value="${hora}"></div>
     <div class="form-group"><label>Hora fin</label><input type="time" id="p-fin"></div>
-    <div class="form-group"><label>Tipo de lente</label>
-      <select id="p-tipo">
-        <option value="monofocal">Monofocal</option>
-        <option value="bifocal">Bifocal</option>
-        <option value="multifocal">Multifocal</option>
-        <option value="ocupacional">Ocupacional</option>
-        <option value="sol">Lentes de sol</option>
-      </select>
-    </div>
-    <div class="form-group"><label>Marca lente</label>
-      <select id="p-marca">${state.lentesMarcas.map(m=>`<option>${m}</option>`).join('')}</select>
-    </div>
-    <div class="form-group"><label>Anteojos armados (cantidad)</label><input type="number" id="p-cantidad" value="1" min="1"></div>
-    <div class="form-group"><label>¿Hubo error/rehacer?</label>
-      <select id="p-error">
-        <option value="no">No</option>
-        <option value="si">Sí</option>
-      </select>
-    </div>
+  </div>
+</div>
+<div class="card">
+  <div class="card-title">Lentes armadas</div>
+  <div id="prod-items-lista"></div>
+  <button type="button" class="btn-secondary" style="font-size:12px;padding:6px 14px;margin-top:4px" onclick="agregarItemProd()">+ Agregar tipo</button>
+</div>
+<div class="card">
+  <div class="card-title">Errores / rehacer</div>
+  <div class="form-group" style="max-width:260px"><label>¿Hubo error/rehacer?</label>
+    <select id="p-error">
+      <option value="no">No</option>
+      <option value="si">Sí</option>
+    </select>
   </div>
   <div id="error-detail" style="display:none;margin-top:10px">
     <div class="form-grid">
@@ -1037,6 +1084,8 @@ function postRenderExtra(id){
 
 
 function guardarTrabajo(){
+  const items=recolectarItemsProd();
+  if(!items.length){showToast('Agregá al menos un tipo de lente');return;}
   const inicio=document.getElementById('p-inicio').value;
   const fin=document.getElementById('p-fin').value;
   let mins=0;
@@ -1051,9 +1100,10 @@ function guardarTrabajo(){
     fecha:document.getElementById('p-fecha').value,
     turno:document.getElementById('p-turno').value,
     inicio,fin,mins,
-    tipo:document.getElementById('p-tipo').value,
-    marca:document.getElementById('p-marca').value,
-    cantidad:parseInt(document.getElementById('p-cantidad').value)||1,
+    items,
+    cantidad:items.reduce((s,i)=>s+i.cantidad,0),
+    tipo:items[0].tipo,
+    marca:items[0].marca,
     error:hayError,
     tipo_error:hayError?document.getElementById('p-tipo-error').value:'',
     momento_error:hayError?document.getElementById('p-momento-error').value:'',
@@ -1068,34 +1118,37 @@ function guardarTrabajo(){
 
 function renderMisTrabajos(){
   const data=state.produccion.slice().reverse();
-  const total=data.length;
+  const total=data.reduce((s,d)=>s+trabajoCantidad(d),0);
+  const registros=data.length;
   const errores=data.filter(d=>d.error).length;
-  const tasaErr=total?((errores/total)*100).toFixed(1):0;
-  const conTiempo=data.filter(d=>d.mins>0&&d.cantidad>0);
-  const promMins=conTiempo.length?Math.round(conTiempo.reduce((s,d)=>s+(d.mins/d.cantidad),0)/conTiempo.length):0;
+  const tasaErr=registros?((errores/registros)*100).toFixed(1):0;
+  const conTiempo=data.filter(d=>d.mins>0&&trabajoCantidad(d)>0);
+  const promMins=conTiempo.length?Math.round(conTiempo.reduce((s,d)=>s+(d.mins/trabajoCantidad(d)),0)/conTiempo.length):0;
   return `
 <div class="section-header">
   <div><div class="section-title">Mis trabajos</div><div class="section-subtitle">Fernando</div></div>
 </div>
 <div class="metric-grid">
-  <div class="metric"><div class="metric-label">Total anteojos</div><div class="metric-value">${total}</div></div>
+  <div class="metric"><div class="metric-label">Total pares armados</div><div class="metric-value">${total}</div><div class="metric-sub">${registros} registros</div></div>
   <div class="metric"><div class="metric-label">Errores</div><div class="metric-value">${errores}</div><div class="metric-sub">${tasaErr}% tasa error</div></div>
-  <div class="metric"><div class="metric-label">Tiempo prom. por tanda</div><div class="metric-value">${promMins}min</div><div class="metric-sub">tiempo÷anteojos armados</div></div>
+  <div class="metric"><div class="metric-label">Tiempo prom. por par</div><div class="metric-value">${promMins}min</div><div class="metric-sub">tiempo÷pares armados</div></div>
 </div>
 <div class="card">
   <div class="card-title">Historial</div>
   <div class="table-wrap">
   ${data.length?`<table>
-    <thead><tr><th>Fecha</th><th>Turno</th><th>Tipo</th><th>Marca</th><th>Cant.</th><th>Tiempo</th><th>Error</th><th>Tipo error</th><th>Momento</th></tr></thead>
-    <tbody>${data.map(d=>`<tr>
+    <thead><tr><th>Fecha</th><th>Turno</th><th>Lentes armadas</th><th>Total pares</th><th>Tiempo</th><th>Error</th><th>Tipo error</th></tr></thead>
+    <tbody>${data.map(d=>{
+      const detalle=d.items?d.items.map(i=>`<span class="badge badge-gray" style="margin:1px">${i.cantidad}p ${i.tipo}${i.marca?' · '+i.marca:''}</span>`).join(''):`${d.cantidad||1} × ${d.tipo||''} ${d.marca||''}`;
+      return `<tr>
       <td>${d.fecha}</td>
       <td><span class="badge ${d.turno==='manana'?'badge-amber':'badge-blue'}">${d.turno==='manana'?'Mañana':'Tarde'}</span></td>
-      <td>${d.tipo}</td><td>${d.marca}</td><td>${d.cantidad}</td>
+      <td style="min-width:160px">${detalle}</td>
+      <td><b>${trabajoCantidad(d)}</b></td>
       <td>${d.mins?d.mins+'min':'-'}</td>
       <td>${d.error?'<span class="badge badge-red">Sí</span>':'<span class="badge badge-green">No</span>'}</td>
       <td style="font-size:12px">${d.tipo_error||'-'}</td>
-      <td style="font-size:12px">${d.momento_error||'-'}</td>
-    </tr>`).join('')}</tbody>
+    </tr>`;}).join('')}</tbody>
   </table>`:'<p style="color:var(--text3);font-size:13px;padding:1rem 0">Sin trabajos registrados aún.</p>'}
   </div>
 </div>`;
@@ -1104,21 +1157,26 @@ function renderMisTrabajos(){
 // ====== PRODUCCION ADMIN ======
 function renderProduccionAdmin(){
   const data=state.produccion;
-  const total=data.length;
+  const total=data.reduce((s,d)=>s+trabajoCantidad(d),0);
+  const registros=data.length;
   const errores=data.filter(d=>d.error);
-  const tasaErr=total?((errores.length/total)*100).toFixed(1):0;
-  const conTiempo=data.filter(d=>d.mins>0&&d.cantidad>0);
-  const promMins=conTiempo.length?Math.round(conTiempo.reduce((s,d)=>s+(d.mins/d.cantidad),0)/conTiempo.length):0;
+  const tasaErr=registros?((errores.length/registros)*100).toFixed(1):0;
+  const conTiempo=data.filter(d=>d.mins>0&&trabajoCantidad(d)>0);
+  const promMins=conTiempo.length?Math.round(conTiempo.reduce((s,d)=>s+(d.mins/trabajoCantidad(d)),0)/conTiempo.length):0;
 
   const tiposErr={};
   errores.forEach(e=>{tiposErr[e.tipo_error]=(tiposErr[e.tipo_error]||0)+1});
   const momentosErr={};
   errores.forEach(e=>{momentosErr[e.momento_error]=(momentosErr[e.momento_error]||0)+1});
 
+  // Tiempo promedio por tipo — considera todos los items de cada registro
   const tiemposPorTipo={};
-  data.filter(d=>d.mins>0&&d.cantidad>0).forEach(d=>{
-    if(!tiemposPorTipo[d.tipo])tiemposPorTipo[d.tipo]=[];
-    tiemposPorTipo[d.tipo].push(d.mins/d.cantidad);
+  data.filter(d=>d.mins>0&&trabajoCantidad(d)>0).forEach(d=>{
+    const items=d.items||[{tipo:d.tipo,cantidad:d.cantidad||1}];
+    items.forEach(i=>{
+      if(!tiemposPorTipo[i.tipo])tiemposPorTipo[i.tipo]=[];
+      tiemposPorTipo[i.tipo].push(d.mins/trabajoCantidad(d));
+    });
   });
 
   const tiposLabel={graduacion_incorrecta:'Grad. incorrecta',centrado:'Centrado',aranazo:'Rayado',material:'Material',montaje:'Montaje',otro:'Otro'};
@@ -1129,9 +1187,9 @@ function renderProduccionAdmin(){
   <div><div class="section-title">Producción — Fernando</div></div>
 </div>
 <div class="metric-grid">
-  <div class="metric"><div class="metric-label">Total anteojos</div><div class="metric-value">${total}</div></div>
+  <div class="metric"><div class="metric-label">Total pares armados</div><div class="metric-value">${total}</div><div class="metric-sub">${registros} registros</div></div>
   <div class="metric"><div class="metric-label">Con errores</div><div class="metric-value">${errores.length}</div><div class="metric-sub">${tasaErr}% tasa</div></div>
-  <div class="metric"><div class="metric-label">Tiempo prom. por anteojo</div><div class="metric-value">${promMins}min</div><div class="metric-sub">tiempo÷cantidad por tanda</div></div>
+  <div class="metric"><div class="metric-label">Tiempo prom. por par</div><div class="metric-value">${promMins}min</div><div class="metric-sub">tiempo÷pares armados</div></div>
 </div>
 ${Object.keys(tiemposPorTipo).length?`
 <div class="card">
@@ -1169,16 +1227,18 @@ ${errores.length?`
   <div class="card-title">Todos los trabajos</div>
   <div class="table-wrap">
     ${data.length?`<table>
-      <thead><tr><th>Fecha</th><th>Turno</th><th>Tipo</th><th>Cant.</th><th>Tiempo</th><th>Error</th><th>Tipo error</th><th>Momento</th></tr></thead>
-      <tbody>${data.slice().reverse().map(d=>`<tr>
+      <thead><tr><th>Fecha</th><th>Turno</th><th>Lentes armadas</th><th>Pares</th><th>Tiempo</th><th>Error</th><th>Tipo error</th><th>Momento</th></tr></thead>
+      <tbody>${data.slice().reverse().map(d=>{
+        const detalle=d.items?d.items.map(i=>`<span class="badge badge-gray" style="margin:1px">${i.cantidad}p ${i.tipo}${i.marca?' · '+i.marca:''}</span>`).join(''):`${d.cantidad||1} × ${d.tipo||''} ${d.marca||''}`;
+        return `<tr>
         <td>${d.fecha}</td>
         <td><span class="badge ${d.turno==='manana'?'badge-amber':'badge-blue'}">${d.turno==='manana'?'Mañana':'Tarde'}</span></td>
-        <td>${d.tipo}</td><td>${d.cantidad}</td>
+        <td style="min-width:160px">${detalle}</td><td><b>${trabajoCantidad(d)}</b></td>
         <td>${d.mins?d.mins+'min':'-'}</td>
         <td>${d.error?'<span class="badge badge-red">Sí</span>':'<span class="badge badge-green">No</span>'}</td>
         <td style="font-size:12px">${d.tipo_error?tiposLabel[d.tipo_error]||d.tipo_error:'-'}</td>
         <td style="font-size:12px">${d.momento_error?momentosLabel[d.momento_error]||d.momento_error:'-'}</td>
-      </tr>`).join('')}</tbody>
+      </tr>`;}).join('')}</tbody>
     </table>`:'<p style="color:var(--text3);font-size:13px;padding:1rem 0">Sin trabajos registrados aún.</p>'}
   </div>
 </div>`;
