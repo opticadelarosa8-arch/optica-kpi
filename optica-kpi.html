@@ -1,0 +1,1471 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Óptica KPI — Sistema de Gestión</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#F7F5F0;--surface:#FFFFFF;--surface2:#F0EDE6;
+  --border:#E2DDD5;--border2:#CCC8BF;
+  --text:#1A1814;--text2:#6B6860;--text3:#9B9890;
+  --accent:#2C5F4A;--accent2:#4A8C6E;--accent-light:#E8F2ED;
+  --amber:#C17A1A;--amber-light:#FBF3E3;
+  --coral:#C04530;--coral-light:#FAECE7;
+  --blue:#1A5276;--blue-light:#EBF3FA;
+  --purple:#4A3B8C;--purple-light:#EEEDFE;
+  --radius:10px;--radius-lg:16px;
+  --font-display:'DM Serif Display',serif;
+  --font-body:'DM Sans',sans-serif;
+}
+body{font-family:var(--font-body);background:var(--bg);color:var(--text);font-size:14px;line-height:1.6;min-height:100vh}
+
+/* LOGIN */
+#login-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:2rem}
+.login-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:3rem 2.5rem;width:100%;max-width:420px}
+.logo-mark{width:48px;height:48px;background:var(--accent);border-radius:12px;display:flex;align-items:center;justify-content:center;margin-bottom:1.5rem}
+.logo-mark svg{width:24px;height:24px;fill:white}
+.login-card h1{font-family:var(--font-display);font-size:28px;font-weight:400;margin-bottom:0.25rem}
+.login-card p{color:var(--text2);font-size:13px;margin-bottom:2rem}
+.field{margin-bottom:1rem}
+.field label{display:block;font-size:12px;font-weight:500;color:var(--text2);margin-bottom:0.4rem;text-transform:uppercase;letter-spacing:.05em}
+.field input,.field select{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius);font-family:var(--font-body);font-size:14px;background:var(--bg);color:var(--text);outline:none;transition:border .15s}
+.field input:focus,.field select:focus{border-color:var(--accent)}
+.btn-primary{width:100%;padding:11px;background:var(--accent);color:white;border:none;border-radius:var(--radius);font-family:var(--font-body);font-size:14px;font-weight:500;cursor:pointer;transition:background .15s}
+.btn-primary:hover{background:var(--accent2)}
+.error-msg{color:var(--coral);font-size:12px;margin-top:0.5rem;display:none}
+
+/* APP LAYOUT */
+#app{display:none;min-height:100vh;flex-direction:column}
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 1.5rem;height:58px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.topbar-left{display:flex;align-items:center;gap:12px}
+.topbar-logo{width:32px;height:32px;background:var(--accent);border-radius:8px;display:flex;align-items:center;justify-content:center}
+.topbar-logo svg{width:16px;height:16px;fill:white}
+.topbar-title{font-family:var(--font-display);font-size:18px}
+.topbar-user{display:flex;align-items:center;gap:8px}
+.avatar{width:32px;height:32px;border-radius:50%;background:var(--accent-light);color:var(--accent);font-weight:500;font-size:12px;display:flex;align-items:center;justify-content:center}
+.user-name{font-size:13px;font-weight:500}
+.btn-logout{background:none;border:1px solid var(--border);border-radius:8px;padding:5px 12px;font-size:12px;cursor:pointer;color:var(--text2);font-family:var(--font-body)}
+.btn-logout:hover{background:var(--surface2)}
+
+.nav-tabs{background:var(--surface);border-bottom:1px solid var(--border);padding:0 1.5rem;display:flex;gap:0}
+.nav-tab{padding:12px 20px;font-size:13px;font-weight:500;color:var(--text2);cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;white-space:nowrap}
+.nav-tab:hover{color:var(--text)}
+.nav-tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+
+.main-content{flex:1;padding:1.5rem;max-width:1200px;margin:0 auto;width:100%}
+
+/* CARDS */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.5rem;margin-bottom:1rem}
+.card-title{font-size:13px;font-weight:500;color:var(--text2);margin-bottom:1.25rem;text-transform:uppercase;letter-spacing:.06em}
+.metric-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:1.25rem}
+.metric{background:var(--surface2);border-radius:var(--radius);padding:1rem}
+.metric-label{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
+.metric-value{font-size:22px;font-weight:500;color:var(--text)}
+.metric-sub{font-size:11px;color:var(--text2);margin-top:2px}
+
+/* FORM */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-grid.three{grid-template-columns:1fr 1fr 1fr}
+.form-grid.full{grid-template-columns:1fr}
+@media(max-width:600px){.form-grid,.form-grid.three{grid-template-columns:1fr}}
+.form-group{display:flex;flex-direction:column;gap:5px}
+.form-group label{font-size:11px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:.05em}
+.form-group input,.form-group select,.form-group textarea{padding:9px 11px;border:1px solid var(--border);border-radius:var(--radius);font-family:var(--font-body);font-size:13px;background:var(--bg);color:var(--text);outline:none;transition:border .15s}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--accent)}
+.form-group textarea{resize:vertical;min-height:70px}
+.btn-save{background:var(--accent);color:white;border:none;border-radius:var(--radius);padding:10px 24px;font-family:var(--font-body);font-size:13px;font-weight:500;cursor:pointer;transition:background .15s}
+.btn-save:hover{background:var(--accent2)}
+.btn-secondary{background:none;color:var(--text2);border:1px solid var(--border);border-radius:var(--radius);padding:9px 20px;font-family:var(--font-body);font-size:13px;cursor:pointer}
+.btn-secondary:hover{background:var(--surface2)}
+
+/* BADGES */
+.badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:500}
+.badge-green{background:var(--accent-light);color:var(--accent)}
+.badge-amber{background:var(--amber-light);color:var(--amber)}
+.badge-red{background:var(--coral-light);color:var(--coral)}
+.badge-blue{background:var(--blue-light);color:var(--blue)}
+.badge-purple{background:var(--purple-light);color:var(--purple)}
+.badge-gray{background:var(--surface2);color:var(--text2)}
+
+/* TABLE */
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;padding:8px 12px;font-size:11px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border)}
+td{padding:10px 12px;border-bottom:1px solid var(--border2);color:var(--text)}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--surface2)}
+
+/* SECTION HEADER */
+.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem}
+.section-title{font-family:var(--font-display);font-size:22px;font-weight:400}
+.section-subtitle{font-size:13px;color:var(--text2);margin-top:2px}
+
+/* TOGGLE RADIO */
+.toggle-group{display:flex;background:var(--surface2);border-radius:var(--radius);padding:3px;gap:2px}
+.toggle-btn{padding:6px 16px;border:none;background:none;border-radius:7px;font-family:var(--font-body);font-size:12px;font-weight:500;cursor:pointer;color:var(--text2);transition:all .15s}
+.toggle-btn.active{background:var(--surface);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.08)}
+
+/* SEGUIMIENTO */
+.seguimiento-item{border:1px solid var(--border);border-radius:var(--radius);padding:1rem;margin-bottom:8px}
+.seg-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px}
+.seg-name{font-weight:500;font-size:13px}
+.seg-detail{font-size:12px;color:var(--text2)}
+.seg-actions{display:flex;gap:6px;margin-top:8px}
+.seg-btn{padding:5px 12px;border-radius:7px;font-size:11px;font-weight:500;border:none;cursor:pointer;font-family:var(--font-body)}
+.seg-btn-ok{background:var(--accent-light);color:var(--accent)}
+.seg-btn-pres{background:var(--amber-light);color:var(--amber)}
+.seg-btn-lost{background:var(--coral-light);color:var(--coral)}
+
+/* TABS within section */
+.inner-tabs{display:flex;gap:4px;margin-bottom:1.25rem;background:var(--surface2);border-radius:var(--radius);padding:3px;width:fit-content}
+.inner-tab{padding:6px 16px;border:none;background:none;border-radius:7px;font-family:var(--font-body);font-size:12px;font-weight:500;cursor:pointer;color:var(--text2)}
+.inner-tab.active{background:var(--surface);color:var(--text)}
+
+/* SUCCESS TOAST */
+.toast{position:fixed;bottom:24px;right:24px;background:var(--accent);color:white;padding:12px 20px;border-radius:var(--radius);font-size:13px;font-weight:500;z-index:9999;transform:translateY(60px);opacity:0;transition:all .3s}
+.toast.show{transform:translateY(0);opacity:1}
+
+/* PAMI badge */
+.pami-tag{display:inline-flex;align-items:center;gap:4px;background:#EBF3FA;color:#1A5276;border-radius:20px;font-size:10px;font-weight:500;padding:2px 7px}
+
+/* CHART wrapper */
+.chart-wrap{position:relative;width:100%}
+
+/* MODAL */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:500;align-items:center;justify-content:center;padding:1rem}
+.modal-bg.open{display:flex}
+.modal{background:var(--surface);border-radius:var(--radius-lg);padding:1.75rem;width:100%;max-width:520px;max-height:90vh;overflow-y:auto}
+.modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem}
+.modal-title{font-family:var(--font-display);font-size:20px}
+.modal-close{background:none;border:none;font-size:20px;cursor:pointer;color:var(--text2)}
+
+/* CONFIG panel */
+.config-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border2)}
+.config-row:last-child{border-bottom:none}
+.config-label{font-size:13px;font-weight:500}
+.config-sub{font-size:11px;color:var(--text2)}
+.tag-list{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.tag{display:flex;align-items:center;gap:5px;background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:4px 10px;font-size:12px}
+.tag-remove{background:none;border:none;cursor:pointer;color:var(--text3);font-size:14px;line-height:1;padding:0}
+.tag-remove:hover{color:var(--coral)}
+.add-tag-row{display:flex;gap:8px;margin-top:8px}
+.add-tag-row input{flex:1;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:12px;font-family:var(--font-body);background:var(--bg);color:var(--text);outline:none}
+.add-tag-row input:focus{border-color:var(--accent)}
+.btn-add-tag{padding:7px 14px;background:var(--accent);color:white;border:none;border-radius:var(--radius);font-size:12px;cursor:pointer;font-family:var(--font-body)}
+
+/* Responsive */
+@media(max-width:480px){
+  .topbar{padding:0 1rem}
+  .main-content{padding:1rem}
+  .metric-grid{grid-template-columns:1fr 1fr}
+}
+
+/* NAV TABS — horizontal scroll on mobile */
+.nav-tabs{overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.nav-tabs::-webkit-scrollbar{display:none}
+.nav-tab{flex-shrink:0}
+
+/* DASHBOARD responsive 2-col grid */
+.dash-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem}
+@media(max-width:600px){.dash-grid-2{grid-template-columns:1fr}}
+
+/* TOPBAR — ocultar texto en mobile */
+@media(max-width:480px){
+  .user-name{display:none}
+  .topbar-title{display:none}
+}
+
+/* EXTRA ROWS del formulario — acomodar en mobile */
+@media(max-width:480px){
+  #extras-lista>[id^=extra-row-]{grid-template-columns:1fr 1fr !important}
+  #extras-lista>[id^=extra-row-]>button{grid-column:span 2;justify-self:end}
+}
+
+/* LOADING SCREEN */
+#loading-screen{display:none;position:fixed;inset:0;background:rgba(247,245,240,.95);z-index:9998;align-items:center;justify-content:center;flex-direction:column;gap:1rem}
+#loading-screen.show{display:flex}
+.spinner{width:40px;height:40px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="logo-mark">
+      <svg viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
+    </div>
+    <h1>Óptica KPI</h1>
+    <p>Sistema de gestión de ventas y producción</p>
+    <div class="field">
+      <label>Usuario</label>
+      <select id="login-user">
+        <option value="">Seleccioná tu usuario</option>
+        <option value="admin">Admin (dueño)</option>
+        <option value="paola">Paola</option>
+        <option value="paula">Paula</option>
+        <option value="fernando">Fernando</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Contraseña</label>
+      <input type="password" id="login-pass" placeholder="••••••">
+    </div>
+    <div class="error-msg" id="login-error">Usuario o contraseña incorrectos</div>
+    <button class="btn-primary" onclick="doLogin()" style="margin-top:1rem">Ingresar</button>
+    <p style="font-size:11px;color:var(--text3);margin-top:1rem;text-align:center">Contraseñas demo: admin123 / paola123 / paula123 / fer123</p>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="topbar-logo">
+        <svg viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
+      </div>
+      <span class="topbar-title">Óptica KPI</span>
+    </div>
+    <div class="topbar-user">
+      <div id="sync-indicator" title="Sin conexión con Firebase" style="display:none;align-items:center;gap:5px;font-size:11px;color:var(--text3);margin-right:4px">
+        <span id="sync-dot" style="width:7px;height:7px;border-radius:50%;background:var(--text3);display:inline-block"></span>
+        <span id="sync-label">local</span>
+      </div>
+      <div class="avatar" id="top-avatar">AD</div>
+      <span class="user-name" id="top-username">Admin</span>
+      <button class="btn-logout" onclick="doLogout()">Salir</button>
+    </div>
+  </div>
+
+  <div class="nav-tabs" id="nav-tabs"></div>
+
+  <div class="main-content" id="main-content"></div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- LOADING SCREEN (Firebase) -->
+<div id="loading-screen">
+  <div class="spinner"></div>
+  <p style="font-size:13px;color:var(--text2)">Conectando con la nube...</p>
+</div>
+
+<!-- MODAL SEGUIMIENTO -->
+<div class="modal-bg" id="modal-seg">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">Registrar seguimiento</span>
+      <button class="modal-close" onclick="closeModal('modal-seg')">×</button>
+    </div>
+    <div class="form-grid full">
+      <div class="form-group"><label>Resultado del seguimiento</label>
+        <select id="seg-resultado">
+          <option value="venta">Cerró en venta</option>
+          <option value="nuevo_presupuesto">Nuevo presupuesto</option>
+          <option value="perdido">No concretó</option>
+          <option value="pendiente">Pendiente siguiente contacto</option>
+        </select>
+      </div>
+      <div class="form-group" id="seg-monto-group" style="display:none"><label>Monto vendido ($)</label><input type="number" id="seg-monto"></div>
+      <div class="form-group"><label>Notas</label><textarea id="seg-notas" placeholder="Detalles del contacto..."></textarea></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:1rem;justify-content:flex-end">
+      <button class="btn-secondary" onclick="closeModal('modal-seg')">Cancelar</button>
+      <button class="btn-save" onclick="guardarSeguimiento()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL CONFIG -->
+<div class="modal-bg" id="modal-config">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">Configuración</span>
+      <button class="modal-close" onclick="closeModal('modal-config')">×</button>
+    </div>
+    <div style="margin-bottom:1.25rem">
+      <div class="card-title" style="margin-bottom:.75rem">Marcas de armazones</div>
+      <div class="tag-list" id="marcas-list"></div>
+      <div class="add-tag-row"><input id="new-marca" placeholder="Nueva marca..."><button class="btn-add-tag" onclick="addMarca()">Agregar</button></div>
+    </div>
+    <div>
+      <div class="card-title" style="margin-bottom:.75rem">Marcas de lentes</div>
+      <div class="tag-list" id="lentes-marcas-list"></div>
+      <div class="add-tag-row"><input id="new-lente-marca" placeholder="Nueva marca..."><button class="btn-add-tag" onclick="addLenteMarca()">Agregar</button></div>
+    </div>
+    <div style="margin-top:1.25rem;text-align:right">
+      <button class="btn-save" onclick="closeModal('modal-config')">Listo</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ====== FIREBASE CONFIG ======
+// Completá con los datos de tu proyecto en console.firebase.google.com
+// → Configuración del proyecto → Tus apps → SDK de configuración
+// Dejá projectId vacío para seguir usando localStorage (sin sincronización).
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyBkg5348W_ut__Up9JS5xDy-fzcnMNQof4",
+  authDomain: "kpioptica.firebaseapp.com",
+  projectId: "kpioptica",
+  storageBucket: "kpioptica.firebasestorage.app",
+  messagingSenderId: "545540124101",
+  appId: "1:545540124101:web:e6395a5e2cd03e6ce02fac"
+};
+
+let db = null;
+let unsubscribers = [];
+
+// ====== STATE ======
+const USERS = {
+  admin:{pass:'admin123',name:'Admin',role:'admin'},
+  paola:{pass:'paola123',name:'Paola',role:'vendedora'},
+  paula:{pass:'paula123',name:'Paula',role:'vendedora'},
+  fernando:{pass:'fer123',name:'Fernando',role:'produccion'}
+};
+
+let currentUser = null;
+let currentSegId = null;
+
+const state = {
+  ventas: [],
+  atenciones: db ? [] : JSON.parse(localStorage.getItem('kpi_atenciones')||'[]'),
+  produccion: db ? [] : JSON.parse(localStorage.getItem('kpi_produccion')||'[]'),
+  marcas: db ? [] : JSON.parse(localStorage.getItem('kpi_marcas')||'["Oakley","Ray-Ban","Prada","Silhouette","Safilo","Otros"]'),
+  lentesMarcas: db ? [] : JSON.parse(localStorage.getItem('kpi_lentes_marcas')||'["Essilor","Zeiss","Hoya","Indo","Rodenstock","Otros"]'),
+};
+
+function save(key){
+  if(db){
+    if(key==='atenciones'){
+      db.collection('data').doc('atenciones').set({items:state.atenciones}).catch(console.error);
+    } else if(key==='produccion'){
+      db.collection('data').doc('produccion').set({items:state.produccion}).catch(console.error);
+    } else if(key==='marcas'||key==='lentesMarcas'){
+      db.collection('data').doc('config').set({marcas:state.marcas,lentesMarcas:state.lentesMarcas}).catch(console.error);
+    }
+  } else {
+    // Fix: 'lentesMarcas' → clave localStorage 'kpi_lentes_marcas' (bug corregido)
+    const lsKey = key==='lentesMarcas' ? 'kpi_lentes_marcas' : 'kpi_'+key;
+    localStorage.setItem(lsKey, JSON.stringify(state[key]));
+  }
+}
+
+// ====== AUTH ======
+function doLogin(){
+  const u=document.getElementById('login-user').value;
+  const p=document.getElementById('login-pass').value;
+  const err=document.getElementById('login-error');
+  if(!u){err.style.display='block';err.textContent='Seleccioná un usuario';return}
+  if(!USERS[u]||USERS[u].pass!==p){err.style.display='block';err.textContent='Contraseña incorrecta';return}
+  err.style.display='none';
+  currentUser=u;
+  document.getElementById('login-screen').style.display='none';
+  if(FIREBASE_CONFIG.projectId)document.getElementById('loading-screen').classList.add('show');
+  setupFirestoreListeners(()=>{
+    document.getElementById('loading-screen').classList.remove('show');
+    const app=document.getElementById('app');
+    app.style.display='flex';
+    document.getElementById('top-username').textContent=USERS[u].name;
+    document.getElementById('top-avatar').textContent=USERS[u].name.slice(0,2).toUpperCase();
+    renderNav();
+    loadDefaultTab();
+  });
+}
+document.getElementById('login-pass').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin()});
+
+function doLogout(){
+  unsubscribers.forEach(unsub=>unsub());
+  unsubscribers=[];
+  currentUser=null;
+  activeTab='';
+  document.getElementById('app').style.display='none';
+  document.getElementById('login-screen').style.display='flex';
+  document.getElementById('login-user').value='';
+  document.getElementById('login-pass').value='';
+}
+
+function refreshCurrentTab(){
+  if(activeTab)renderContent(activeTab);
+}
+
+function loadScript(src){
+  return new Promise((resolve,reject)=>{
+    if(document.querySelector(`script[src="${src}"]`)){resolve();return;}
+    const s=document.createElement('script');
+    s.src=src;s.onload=resolve;s.onerror=reject;
+    document.head.appendChild(s);
+  });
+}
+
+function setupFirestoreListeners(onReady){
+  if(!FIREBASE_CONFIG.projectId){onReady();return;}
+
+  const CDN='https://www.gstatic.com/firebasejs/9.23.0/';
+  Promise.all([
+    loadScript(CDN+'firebase-app-compat.js'),
+    loadScript(CDN+'firebase-firestore-compat.js')
+  ]).then(()=>{
+    if(!db){
+      try{
+        firebase.initializeApp(FIREBASE_CONFIG);
+        db=firebase.firestore();
+      } catch(e){console.warn('Firebase init:',e);onReady();return;}
+    }
+    _setupListeners(onReady);
+  }).catch(err=>{
+    console.error('Error cargando Firebase SDK:',err);
+    setSyncStatus('error');
+    onReady();
+  });
+  return; // el resto lo maneja _setupListeners
+}
+
+function setSyncStatus(status){
+  const ind=document.getElementById('sync-indicator');
+  const dot=document.getElementById('sync-dot');
+  const lbl=document.getElementById('sync-label');
+  if(!ind)return;
+  ind.style.display='flex';
+  if(status==='ok'){
+    dot.style.background='#2C5F4A';lbl.textContent='Firebase';
+    ind.title='Sincronizado con Firebase';
+  } else if(status==='error'){
+    dot.style.background='var(--coral)';lbl.textContent='sin nube';
+    ind.title='Sin conexión con Firebase — datos solo en este dispositivo';
+  }
+}
+
+function _setupListeners(onReady){
+
+  // Migración automática: si Firestore está vacío y hay datos en localStorage, los sube
+  async function migrateIfNeeded(){
+    const atenSnap=await db.collection('data').doc('atenciones').get();
+    if(!atenSnap.exists||!(atenSnap.data().items&&atenSnap.data().items.length)){
+      const local=JSON.parse(localStorage.getItem('kpi_atenciones')||'[]');
+      if(local.length)await db.collection('data').doc('atenciones').set({items:local});
+    }
+    const prodSnap=await db.collection('data').doc('produccion').get();
+    if(!prodSnap.exists||!(prodSnap.data().items&&prodSnap.data().items.length)){
+      const local=JSON.parse(localStorage.getItem('kpi_produccion')||'[]');
+      if(local.length)await db.collection('data').doc('produccion').set({items:local});
+    }
+    const cfgSnap=await db.collection('data').doc('config').get();
+    if(!cfgSnap.exists||!(cfgSnap.data().marcas&&cfgSnap.data().marcas.length)){
+      await db.collection('data').doc('config').set({
+        marcas:JSON.parse(localStorage.getItem('kpi_marcas')||'["Oakley","Ray-Ban","Prada","Silhouette","Safilo","Otros"]'),
+        lentesMarcas:JSON.parse(localStorage.getItem('kpi_lentes_marcas')||'["Essilor","Zeiss","Hoya","Indo","Rodenstock","Otros"]')
+      });
+    }
+  }
+
+  let readyCount=0;
+  function checkReady(){
+    readyCount++;
+    if(readyCount===3)onReady();
+    // actualizaciones posteriores → refrescar tab activo
+    else if(readyCount>3)refreshCurrentTab();
+  }
+
+  migrateIfNeeded().then(()=>{
+    setSyncStatus('ok');
+    const u1=db.collection('data').doc('atenciones').onSnapshot(snap=>{
+      if(snap.exists)state.atenciones=(snap.data().items||[]);
+      checkReady();
+    },console.error);
+    const u2=db.collection('data').doc('produccion').onSnapshot(snap=>{
+      if(snap.exists)state.produccion=(snap.data().items||[]);
+      checkReady();
+    },console.error);
+    const u3=db.collection('data').doc('config').onSnapshot(snap=>{
+      if(snap.exists){state.marcas=snap.data().marcas||state.marcas;state.lentesMarcas=snap.data().lentesMarcas||state.lentesMarcas;}
+      checkReady();
+    },console.error);
+    unsubscribers=[u1,u2,u3];
+  }).catch(err=>{console.error('Firestore setup error:',err);onReady();});
+}
+
+// ====== NAV ======
+const TABS_ADMIN=[
+  {id:'dashboard',label:'Dashboard'},
+  {id:'ventas-list',label:'Registro ventas'},
+  {id:'seguimiento',label:'Seguimiento'},
+  {id:'produccion',label:'Producción'},
+  {id:'config',label:'Configuración'},
+];
+const TABS_VENDEDORA=[
+  {id:'nueva-venta',label:'Nueva atención'},
+  {id:'ventas-list',label:'Mis registros'},
+  {id:'seguimiento',label:'Seguimiento'},
+];
+const TABS_PRODUCCION=[
+  {id:'nuevo-trabajo',label:'Nuevo trabajo'},
+  {id:'mis-trabajos',label:'Mis trabajos'},
+];
+
+let activeTabs=[];
+let activeTab='';
+
+function renderNav(){
+  const role=USERS[currentUser].role;
+  activeTabs=role==='admin'?TABS_ADMIN:role==='vendedora'?TABS_VENDEDORA:TABS_PRODUCCION;
+  const nav=document.getElementById('nav-tabs');
+  nav.innerHTML=activeTabs.map(t=>`<div class="nav-tab${activeTab===t.id?' active':''}" onclick="goTab('${t.id}')">${t.label}</div>`).join('');
+}
+
+function goTab(id){
+  activeTab=id;
+  renderNav();
+  renderContent(id);
+}
+
+function loadDefaultTab(){
+  const role=USERS[currentUser].role;
+  const def=role==='admin'?'dashboard':role==='vendedora'?'nueva-venta':'nuevo-trabajo';
+  goTab(def);
+}
+
+// ====== RENDER CONTENT ======
+function renderContent(id){
+  const el=document.getElementById('main-content');
+  if(id==='nueva-venta')el.innerHTML=renderNuevaVenta();
+  else if(id==='ventas-list')el.innerHTML=renderVentasList();
+  else if(id==='seguimiento')el.innerHTML=renderSeguimiento();
+  else if(id==='produccion')el.innerHTML=renderProduccionAdmin();
+  else if(id==='nuevo-trabajo')el.innerHTML=renderNuevoTrabajo();
+  else if(id==='mis-trabajos')el.innerHTML=renderMisTrabajos();
+  else if(id==='dashboard')el.innerHTML=renderDashboard();
+  else if(id==='config')el.innerHTML=renderConfig();
+  postRender(id);
+}
+
+// ====== NUEVA VENTA / ATENCION ======
+function renderNuevaVenta(){
+  const hoy=new Date().toISOString().split('T')[0];
+  const hora=new Date().toTimeString().slice(0,5);
+  return `
+<div class="section-header">
+  <div><div class="section-title">Nueva atención</div><div class="section-subtitle">${USERS[currentUser].name} · ${hoy}</div></div>
+</div>
+<div class="card">
+  <div class="card-title">Datos del cliente</div>
+  <div class="form-grid">
+    <div class="form-group"><label>Fecha</label><input type="date" id="f-fecha" value="${hoy}"></div>
+    <div class="form-group"><label>Hora</label><input type="time" id="f-hora" value="${hora}"></div>
+    <div class="form-group"><label>Nombre del cliente</label><input type="text" id="f-cliente" placeholder="Opcional..."></div>
+    <div class="form-group"><label>Teléfono (si genera ppto)</label><input type="tel" id="f-tel" placeholder="Opcional..."></div>
+  </div>
+</div>
+<div class="card">
+  <div class="card-title">Origen de la visita</div>
+  <div class="form-grid">
+    <div class="form-group"><label>¿Cómo llegó?</label>
+      <select id="f-origen">
+        <option value="espontaneo">Espontáneo (pasó por la óptica)</option>
+        <option value="fidelizacion">Campaña de fidelización</option>
+        <option value="marketing">Marketing / redes</option>
+        <option value="derivacion">Derivación / recomendación</option>
+        <option value="pami_convenio">PAMI convenio</option>
+        <option value="otro">Otro</option>
+      </select>
+    </div>
+    <div class="form-group"><label>¿Es cliente PAMI?</label>
+      <select id="f-pami">
+        <option value="no">No</option>
+        <option value="si">Sí — PAMI</option>
+      </select>
+    </div>
+  </div>
+  <div class="form-group" id="fid-group" style="display:none;margin-top:10px"><label>Detalle fidelización</label>
+    <select id="f-fid-tipo">
+      <option value="control_graduacion">Actualización de graduación sin cargo</option>
+      <option value="mantenimiento">Mantenimiento gratuito ofrecido</option>
+      <option value="descuento_lentes">Descuento en lentes</option>
+      <option value="descuento_armazon">Descuento en armazón</option>
+      <option value="combo">Combo (graduación + descuento)</option>
+    </select>
+  </div>
+</div>
+<div class="card">
+  <div class="card-title">Resultado de la atención</div>
+  <div class="form-grid full">
+    <div class="form-group"><label>Resultado</label>
+      <select id="f-resultado" onchange="toggleResultado()">
+        <option value="venta">Venta concretada</option>
+        <option value="presupuesto">Quedó en presupuesto</option>
+        <option value="solo_consulta">Solo consulta / no compró</option>
+      </select>
+    </div>
+  </div>
+  <div id="venta-fields">
+    <div class="form-grid" style="margin-top:10px">
+      <div class="form-group"><label>Tipo de lente</label>
+        <select id="f-tipo-lente">
+          <option value="monofocal">Monofocal</option>
+          <option value="bifocal">Bifocal</option>
+          <option value="multifocal">Multifocal</option>
+          <option value="ocupacional">Ocupacional</option>
+          <option value="solo_armazon">Solo armazón (sin lentes)</option>
+          <option value="sol">Lentes de sol</option>
+          <option value="no_aplica">No aplica (solo accesorio/arreglo)</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Marca lente</label>
+        <select id="f-marca-lente">${state.lentesMarcas.map(m=>`<option>${m}</option>`).join('')}</select>
+      </div>
+      <div class="form-group"><label>Armazón — marca</label>
+        <select id="f-marca-armazon">${state.marcas.map(m=>`<option>${m}</option>`).join('')}</select>
+      </div>
+      <div class="form-group"><label>Monto vendido ($)</label><input type="number" id="f-monto" placeholder="0"></div>
+    </div>
+    <div style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px">
+      <div style="font-size:11px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Accesorios / Insumos / Arreglos</div>
+      <div class="form-grid">
+        <div class="form-group"><label>¿Incluye accesorio o arreglo?</label>
+          <select id="f-tiene-extra" onchange="toggleExtra()">
+            <option value="no">No</option>
+            <option value="si">Sí</option>
+          </select>
+        </div>
+      </div>
+      <div id="extra-fields" style="display:none;margin-top:8px">
+        <div id="extras-lista"></div>
+        <button type="button" class="btn-secondary" style="font-size:12px;padding:6px 14px;margin-top:6px" onclick="agregarExtra()">+ Agregar ítem</button>
+      </div>
+    </div>
+  </div>
+  <div id="ppto-fields" style="display:none;margin-top:10px">
+    <div class="form-grid">
+      <div class="form-group"><label>Tipo de lente presupuestado</label>
+        <select id="f-tipo-ppto">
+          <option value="monofocal">Monofocal</option><option value="bifocal">Bifocal</option>
+          <option value="multifocal">Multifocal</option><option value="ocupacional">Ocupacional</option>
+          <option value="sol">Lentes de sol</option><option value="otro">Otro</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Monto presupuestado ($)</label><input type="number" id="f-monto-ppto" placeholder="0"></div>
+    </div>
+  </div>
+  <div class="form-group" style="margin-top:10px"><label>Notas / motivo si no vendió</label>
+    <textarea id="f-notas" placeholder="Ej: precio alto, necesita consultar con familiar, vuelve la semana que viene..."></textarea>
+  </div>
+</div>
+<div style="display:flex;gap:10px;justify-content:flex-end">
+  <button class="btn-secondary" onclick="limpiarForm()">Limpiar</button>
+  <button class="btn-save" onclick="guardarAtencion()">Guardar atención</button>
+</div>`;
+}
+
+function toggleResultado(){
+  const v=document.getElementById('f-resultado').value;
+  document.getElementById('venta-fields').style.display=v==='venta'?'block':'none';
+  document.getElementById('ppto-fields').style.display=v==='presupuesto'?'block':'none';
+}
+
+// ====== EXTRAS (accesorios/insumos/arreglos) ======
+const TIPOS_EXTRA=[
+  {v:'accesorio',l:'Accesorio'},
+  {v:'insumo',l:'Insumo'},
+  {v:'arreglo',l:'Arreglo / reparación'},
+  {v:'limpieza',l:'Kit de limpieza'},
+  {v:'estuche',l:'Estuche'},
+  {v:'cordon',l:'Cordón / cadena'},
+  {v:'otro',l:'Otro'},
+];
+let extrasCount=0;
+
+function toggleExtra(){
+  const v=document.getElementById('f-tiene-extra').value;
+  document.getElementById('extra-fields').style.display=v==='si'?'block':'none';
+  if(v==='si'&&document.getElementById('extras-lista').children.length===0)agregarExtra();
+}
+
+function agregarExtra(){
+  extrasCount++;
+  const id=extrasCount;
+  const div=document.createElement('div');
+  div.id=`extra-row-${id}`;
+  div.style.cssText='display:grid;grid-template-columns:1.5fr 2fr 1fr auto;gap:8px;align-items:end;margin-bottom:8px';
+  div.innerHTML=`
+    <div class="form-group" style="margin:0"><label style="font-size:10px">Tipo</label>
+      <select id="ext-tipo-${id}" style="padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:12px;background:var(--bg);font-family:var(--font-body)">
+        ${TIPOS_EXTRA.map(t=>`<option value="${t.v}">${t.l}</option>`).join('')}
+      </select>
+    </div>
+    <div class="form-group" style="margin:0"><label style="font-size:10px">Descripción</label>
+      <input type="text" id="ext-desc-${id}" placeholder="Ej: ajuste patillas..." style="padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:12px;background:var(--bg);font-family:var(--font-body);width:100%">
+    </div>
+    <div class="form-group" style="margin:0"><label style="font-size:10px">Monto ($)</label>
+      <input type="number" id="ext-monto-${id}" placeholder="0" style="padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:12px;background:var(--bg);font-family:var(--font-body);width:100%">
+    </div>
+    <button type="button" onclick="document.getElementById('extra-row-${id}').remove()" style="padding:8px;background:var(--coral-light);color:var(--coral);border:none;border-radius:var(--radius);cursor:pointer;font-size:14px;line-height:1">×</button>`;
+  document.getElementById('extras-lista').appendChild(div);
+}
+
+function recolectarExtras(){
+  const extras=[];
+  document.querySelectorAll('#extras-lista>[id^=extra-row-]').forEach(row=>{
+    const id=row.id.replace('extra-row-','');
+    const tipo=document.getElementById(`ext-tipo-${id}`)?.value;
+    const desc=document.getElementById(`ext-desc-${id}`)?.value||'';
+    const monto=parseFloat(document.getElementById(`ext-monto-${id}`)?.value)||0;
+    if(tipo)extras.push({tipo,desc,monto});
+  });
+  return extras;
+}
+
+function postRender(id){
+  if(id==='nueva-venta'){
+    document.getElementById('f-origen').addEventListener('change',function(){
+      document.getElementById('fid-group').style.display=this.value==='fidelizacion'?'block':'none';
+    });
+    document.getElementById('f-resultado').addEventListener('change',toggleResultado);
+  }
+  if(id==='dashboard')renderCharts();
+  if(id==='config')renderConfigTags();
+  if(id==='seguimiento')renderSegItems();
+  if(id==='nuevo-trabajo'){
+    const sel=document.getElementById('p-error');
+    if(sel)sel.onchange=function(){document.getElementById('error-detail').style.display=this.value==='si'?'block':'none'};
+  }
+}
+
+function guardarAtencion(){
+  const fecha=document.getElementById('f-fecha').value;
+  const hora=document.getElementById('f-hora').value;
+  const resultado=document.getElementById('f-resultado').value;
+  if(!fecha||!hora){showToast('Completá fecha y hora');return}
+  const obj={
+    id:Date.now(),
+    vendedora:currentUser,
+    fecha,hora,
+    cliente:document.getElementById('f-cliente').value||'Anónimo',
+    tel:document.getElementById('f-tel').value,
+    origen:document.getElementById('f-origen').value,
+    pami:document.getElementById('f-pami').value,
+    fid_tipo:document.getElementById('f-origen').value==='fidelizacion'?document.getElementById('f-fid-tipo').value:'',
+    resultado,
+    tipo_lente:resultado==='venta'?document.getElementById('f-tipo-lente').value:'',
+    marca_lente:resultado==='venta'?document.getElementById('f-marca-lente').value:'',
+    marca_armazon:resultado==='venta'?document.getElementById('f-marca-armazon').value:'',
+    monto:resultado==='venta'?parseFloat(document.getElementById('f-monto').value)||0:0,
+    extras:resultado==='venta'&&document.getElementById('f-tiene-extra')?.value==='si'?recolectarExtras():[],
+    tipo_ppto:resultado==='presupuesto'?document.getElementById('f-tipo-ppto').value:'',
+    monto_ppto:resultado==='presupuesto'?parseFloat(document.getElementById('f-monto-ppto').value)||0:0,
+    notas:document.getElementById('f-notas').value,
+    seg_estado:'pendiente',
+    seg_historial:[],
+  };
+  state.atenciones.push(obj);
+  save('atenciones');
+  showToast('Atención guardada correctamente');
+  limpiarForm();
+}
+
+function limpiarForm(){
+  document.querySelectorAll('#main-content input,#main-content select,#main-content textarea').forEach(el=>{
+    if(el.type==='date')el.value=new Date().toISOString().split('T')[0];
+    else if(el.type==='time')el.value=new Date().toTimeString().slice(0,5);
+    else if(el.tagName==='SELECT')el.selectedIndex=0;
+    else el.value='';
+  });
+  document.getElementById('venta-fields').style.display='block';
+  document.getElementById('ppto-fields').style.display='none';
+  document.getElementById('fid-group').style.display='none';
+  const extrasList=document.getElementById('extras-lista');
+  if(extrasList)extrasList.innerHTML='';
+  const extraFields=document.getElementById('extra-fields');
+  if(extraFields)extraFields.style.display='none';
+  extrasCount=0;
+}
+
+// ====== LISTA VENTAS ======
+function renderVentasList(){
+  const mes=new Date().toISOString().slice(0,7);
+  const isAdmin=USERS[currentUser].role==='admin';
+  const data=state.atenciones.filter(a=>isAdmin?true:a.vendedora===currentUser);
+  const porMes=data.filter(a=>a.fecha.startsWith(mes));
+  const ventas=porMes.filter(a=>a.resultado==='venta');
+  const presupuestos=porMes.filter(a=>a.resultado==='presupuesto');
+  const totalVendido=ventas.reduce((s,v)=>s+v.monto,0);
+  const conv=porMes.length?((ventas.length/porMes.length)*100).toFixed(0):0;
+
+  return `
+<div class="section-header">
+  <div><div class="section-title">Registros</div><div class="section-subtitle">Mes actual</div></div>
+  ${isAdmin?`<div class="toggle-group">
+    <button class="toggle-btn active" onclick="filtrarVendedora('todas',this)">Todas</button>
+    <button class="toggle-btn" onclick="filtrarVendedora('paola',this)">Paola</button>
+    <button class="toggle-btn" onclick="filtrarVendedora('paula',this)">Paula</button>
+  </div>`:''}
+</div>
+<div class="metric-grid">
+  <div class="metric"><div class="metric-label">Atenciones</div><div class="metric-value">${porMes.length}</div><div class="metric-sub">este mes</div></div>
+  <div class="metric"><div class="metric-label">Ventas</div><div class="metric-value">${ventas.length}</div><div class="metric-sub">conversiones</div></div>
+  <div class="metric"><div class="metric-label">Conversión</div><div class="metric-value">${conv}%</div><div class="metric-sub">atendido → venta</div></div>
+  <div class="metric"><div class="metric-label">Total vendido</div><div class="metric-value">$${totalVendido.toLocaleString('es-AR')}</div><div class="metric-sub">este mes</div></div>
+  <div class="metric"><div class="metric-label">Presupuestos</div><div class="metric-value">${presupuestos.length}</div><div class="metric-sub">abiertos</div></div>
+  <div class="metric"><div class="metric-label">Ticket prom.</div><div class="metric-value">$${ventas.length?Math.round(totalVendido/ventas.length).toLocaleString('es-AR'):0}</div><div class="metric-sub">por venta</div></div>
+</div>
+<div class="card">
+  <div class="card-title">Historial de atenciones</div>
+  <div class="table-wrap" id="tabla-ventas">
+  ${renderTablaAtenciones(data.slice().reverse())}
+  </div>
+</div>`;
+}
+
+function renderTablaAtenciones(data){
+  if(!data.length)return '<p style="color:var(--text3);font-size:13px;padding:1rem 0">Sin registros aún.</p>';
+  return `<table>
+    <thead><tr><th>Fecha</th><th>Hora</th><th>Vendedora</th><th>Cliente</th><th>Origen</th><th>PAMI</th><th>Resultado</th><th>Tipo</th><th>Monto</th><th>Extras</th><th>Notas</th></tr></thead>
+    <tbody>${data.map(a=>{
+      const extrasHtml=a.extras&&a.extras.length?a.extras.map(e=>`<span class="badge badge-purple" style="margin:1px;font-size:10px">${e.tipo}${e.desc?' · '+e.desc:''}</span>`).join(''):'—';
+      return `<tr>
+      <td>${a.fecha}</td>
+      <td>${a.hora}</td>
+      <td><span class="badge ${a.vendedora==='paola'?'badge-blue':'badge-purple'}">${USERS[a.vendedora]?.name||a.vendedora}</span></td>
+      <td>${a.cliente}</td>
+      <td>${badgeOrigen(a.origen)}</td>
+      <td>${a.pami==='si'?'<span class="pami-tag">PAMI</span>':'-'}</td>
+      <td>${badgeResultado(a.resultado)}</td>
+      <td>${a.tipo_lente||a.tipo_ppto||'-'}</td>
+      <td>${a.monto?'$'+a.monto.toLocaleString('es-AR'):a.monto_ppto?'~$'+a.monto_ppto.toLocaleString('es-AR'):'-'}</td>
+      <td style="min-width:100px">${extrasHtml}</td>
+      <td style="max-width:140px;color:var(--text2);font-size:12px">${a.notas||'-'}</td>
+    </tr>`;}).join('')}</tbody>
+  </table>`;
+}
+
+function filtrarVendedora(v,btn){
+  document.querySelectorAll('.toggle-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  const data=state.atenciones.filter(a=>v==='todas'?true:a.vendedora===v);
+  document.getElementById('tabla-ventas').innerHTML=renderTablaAtenciones(data.slice().reverse());
+}
+
+function badgeOrigen(o){
+  const map={espontaneo:'badge-gray',fidelizacion:'badge-green',marketing:'badge-amber',derivacion:'badge-blue',pami_convenio:'badge-blue',otro:'badge-gray'};
+  const label={espontaneo:'Espontáneo',fidelizacion:'Fidelización',marketing:'Marketing',derivacion:'Derivación',pami_convenio:'PAMI conv.',otro:'Otro'};
+  return `<span class="badge ${map[o]||'badge-gray'}">${label[o]||o}</span>`;
+}
+
+function badgeResultado(r){
+  const map={venta:'badge-green',presupuesto:'badge-amber',solo_consulta:'badge-gray'};
+  const label={venta:'Venta','presupuesto':'Presupuesto',solo_consulta:'Consulta'};
+  return `<span class="badge ${map[r]||'badge-gray'}">${label[r]||r}</span>`;
+}
+
+// ====== SEGUIMIENTO ======
+function renderSeguimiento(){
+  return `
+<div class="section-header">
+  <div><div class="section-title">Seguimiento de presupuestos</div><div class="section-subtitle">Clientes que quedaron en presupuesto</div></div>
+</div>
+<div class="inner-tabs">
+  <button class="inner-tab active" onclick="filterSeg('pendiente',this)">Pendientes</button>
+  <button class="inner-tab" onclick="filterSeg('venta',this)">Cerrados en venta</button>
+  <button class="inner-tab" onclick="filterSeg('perdido',this)">No concretaron</button>
+  <button class="inner-tab" onclick="filterSeg('todos',this)">Todos</button>
+</div>
+<div id="seg-items"></div>`;
+}
+
+let segFilter='pendiente';
+function filterSeg(f,btn){
+  segFilter=f;
+  document.querySelectorAll('.inner-tab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderSegItems();
+}
+
+function renderSegItems(){
+  const isAdmin=USERS[currentUser].role==='admin';
+  let presupuestos=state.atenciones.filter(a=>a.resultado==='presupuesto'&&(isAdmin||a.vendedora===currentUser));
+  if(segFilter!=='todos')presupuestos=presupuestos.filter(a=>{
+    const ultimo=a.seg_historial.length?a.seg_historial[a.seg_historial.length-1].resultado:null;
+    if(segFilter==='pendiente')return !ultimo||ultimo==='pendiente'||ultimo==='nuevo_presupuesto';
+    if(segFilter==='venta')return ultimo==='venta';
+    if(segFilter==='perdido')return ultimo==='perdido';
+    return true;
+  });
+  const el=document.getElementById('seg-items');
+  if(!el)return;
+  if(!presupuestos.length){el.innerHTML='<p style="color:var(--text3);font-size:13px;padding:1rem 0">Sin presupuestos en esta categoría.</p>';return}
+  el.innerHTML=presupuestos.slice().reverse().map(a=>{
+    const ultimo=a.seg_historial.length?a.seg_historial[a.seg_historial.length-1]:null;
+    const diasAtras=Math.floor((Date.now()-new Date(a.fecha+'T'+a.hora).getTime())/86400000);
+    return `<div class="seguimiento-item">
+      <div class="seg-header">
+        <div>
+          <div class="seg-name">${a.cliente} ${a.pami==='si'?'<span class="pami-tag">PAMI</span>':''}</div>
+          <div class="seg-detail">${a.fecha} · ${USERS[a.vendedora]?.name||a.vendedora} · ${a.tipo_ppto||'lente'} · ${a.tel?'Tel: '+a.tel:''}</div>
+          ${a.origen==='fidelizacion'?`<div style="margin-top:3px"><span class="badge badge-green">Fidelización</span></div>`:''}
+        </div>
+        <div style="text-align:right">
+          ${a.monto_ppto?`<div style="font-weight:500;font-size:15px">~$${a.monto_ppto.toLocaleString('es-AR')}</div>`:''}
+          <div style="font-size:11px;color:var(--text3)">${diasAtras} días atrás</div>
+        </div>
+      </div>
+      ${ultimo?`<div style="font-size:12px;color:var(--text2);margin-top:4px">Último seguimiento: <b>${ultimo.fecha}</b> — ${badgeResultado(ultimo.resultado)} ${ultimo.notas?'· '+ultimo.notas:''}</div>`:'<div style="font-size:12px;color:var(--text3)">Sin seguimiento aún</div>'}
+      ${a.seg_historial.length?`<div style="font-size:11px;color:var(--text3);margin-top:3px">${a.seg_historial.length} contacto(s) previo(s)</div>`:''}
+      <div class="seg-actions">
+        <button class="seg-btn seg-btn-ok" onclick="openSegModal(${a.id})">Registrar seguimiento</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openSegModal(id){
+  currentSegId=id;
+  document.getElementById('seg-resultado').value='pendiente';
+  document.getElementById('seg-monto-group').style.display='none';
+  document.getElementById('seg-notas').value='';
+  document.getElementById('modal-seg').classList.add('open');
+  document.getElementById('seg-resultado').onchange=function(){
+    document.getElementById('seg-monto-group').style.display=this.value==='venta'?'block':'none';
+  };
+}
+
+function guardarSeguimiento(){
+  const a=state.atenciones.find(x=>x.id===currentSegId);
+  if(!a)return;
+  const resultado=document.getElementById('seg-resultado').value;
+  const monto=parseFloat(document.getElementById('seg-monto').value)||0;
+  const notas=document.getElementById('seg-notas').value;
+  const hoy=new Date().toISOString().split('T')[0];
+  a.seg_historial.push({fecha:hoy,resultado,monto,notas});
+  if(resultado==='venta'){
+    a.resultado='venta';
+    a.monto=monto||a.monto_ppto;
+    a.tipo_lente=a.tipo_ppto;
+  }
+  save('atenciones');
+  closeModal('modal-seg');
+  renderSegItems();
+  showToast('Seguimiento registrado');
+}
+
+// ====== PRODUCCION ======
+function renderNuevoTrabajo(){
+  const hoy=new Date().toISOString().split('T')[0];
+  const hora=new Date().toTimeString().slice(0,5);
+  const turno=parseInt(hora.split(':')[0])>=17?'tarde':'manana';
+  return `
+<div class="section-header">
+  <div><div class="section-title">Nuevo trabajo</div><div class="section-subtitle">Fernando · ${hoy}</div></div>
+</div>
+<div class="card">
+  <div class="card-title">Datos del trabajo</div>
+  <div class="form-grid">
+    <div class="form-group"><label>Fecha</label><input type="date" id="p-fecha" value="${hoy}"></div>
+    <div class="form-group"><label>Turno</label>
+      <select id="p-turno">
+        <option value="manana" ${turno==='manana'?'selected':''}>Mañana (9–13hs)</option>
+        <option value="tarde" ${turno==='tarde'?'selected':''}>Tarde (17–21hs)</option>
+      </select>
+    </div>
+    <div class="form-group"><label>Hora inicio</label><input type="time" id="p-inicio" value="${hora}"></div>
+    <div class="form-group"><label>Hora fin</label><input type="time" id="p-fin"></div>
+    <div class="form-group"><label>Tipo de lente</label>
+      <select id="p-tipo">
+        <option value="monofocal">Monofocal</option>
+        <option value="bifocal">Bifocal</option>
+        <option value="multifocal">Multifocal</option>
+        <option value="ocupacional">Ocupacional</option>
+        <option value="sol">Lentes de sol</option>
+      </select>
+    </div>
+    <div class="form-group"><label>Marca lente</label>
+      <select id="p-marca">${state.lentesMarcas.map(m=>`<option>${m}</option>`).join('')}</select>
+    </div>
+    <div class="form-group"><label>Anteojos armados (cantidad)</label><input type="number" id="p-cantidad" value="1" min="1"></div>
+    <div class="form-group"><label>¿Hubo error/rehacer?</label>
+      <select id="p-error">
+        <option value="no">No</option>
+        <option value="si">Sí</option>
+      </select>
+    </div>
+  </div>
+  <div id="error-detail" style="display:none;margin-top:10px">
+    <div class="form-grid">
+      <div class="form-group"><label>Tipo de error</label>
+        <select id="p-tipo-error">
+          <option value="graduacion_incorrecta">Graduación incorrecta</option>
+          <option value="centrado">Error de centrado</option>
+          <option value="aranazo">Rayado / araño</option>
+          <option value="material">Defecto de material</option>
+          <option value="montaje">Error de montaje</option>
+          <option value="otro">Otro</option>
+        </select>
+      </div>
+      <div class="form-group"><label>¿En qué momento surgió?</label>
+        <select id="p-momento-error">
+          <option value="proceso">Durante el proceso</option>
+          <option value="control_final">En control final</option>
+          <option value="entrega">Al momento de entrega</option>
+          <option value="postventa">Post-entrega (reclamo)</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group" style="margin-top:10px"><label>Descripción del error</label>
+      <textarea id="p-desc-error" placeholder="Describí qué pasó..."></textarea>
+    </div>
+  </div>
+  <div class="form-group" style="margin-top:10px"><label>Notas adicionales</label>
+    <textarea id="p-notas" placeholder="Observaciones..."></textarea>
+  </div>
+</div>
+<div style="display:flex;gap:10px;justify-content:flex-end">
+  <button class="btn-save" onclick="guardarTrabajo()">Guardar trabajo</button>
+</div>`;
+}
+
+function postRenderExtra(id){
+  if(id==='nuevo-trabajo'){
+    const sel=document.getElementById('p-error');
+    if(sel)sel.onchange=function(){document.getElementById('error-detail').style.display=this.value==='si'?'block':'none'};
+  }
+}
+
+
+function guardarTrabajo(){
+  const inicio=document.getElementById('p-inicio').value;
+  const fin=document.getElementById('p-fin').value;
+  let mins=0;
+  if(inicio&&fin){
+    const [ih,im]=inicio.split(':').map(Number);
+    const [fh,fm]=fin.split(':').map(Number);
+    mins=(fh*60+fm)-(ih*60+im);
+  }
+  const hayError=document.getElementById('p-error').value==='si';
+  const obj={
+    id:Date.now(),
+    fecha:document.getElementById('p-fecha').value,
+    turno:document.getElementById('p-turno').value,
+    inicio,fin,mins,
+    tipo:document.getElementById('p-tipo').value,
+    marca:document.getElementById('p-marca').value,
+    cantidad:parseInt(document.getElementById('p-cantidad').value)||1,
+    error:hayError,
+    tipo_error:hayError?document.getElementById('p-tipo-error').value:'',
+    momento_error:hayError?document.getElementById('p-momento-error').value:'',
+    desc_error:hayError?document.getElementById('p-desc-error').value:'',
+    notas:document.getElementById('p-notas').value,
+  };
+  state.produccion.push(obj);
+  save('produccion');
+  showToast('Trabajo registrado');
+  goTab('nuevo-trabajo');
+}
+
+function renderMisTrabajos(){
+  const data=state.produccion.slice().reverse();
+  const total=data.length;
+  const errores=data.filter(d=>d.error).length;
+  const tasaErr=total?((errores/total)*100).toFixed(1):0;
+  const conTiempo=data.filter(d=>d.mins>0&&d.cantidad>0);
+  const promMins=conTiempo.length?Math.round(conTiempo.reduce((s,d)=>s+(d.mins/d.cantidad),0)/conTiempo.length):0;
+  return `
+<div class="section-header">
+  <div><div class="section-title">Mis trabajos</div><div class="section-subtitle">Fernando</div></div>
+</div>
+<div class="metric-grid">
+  <div class="metric"><div class="metric-label">Total anteojos</div><div class="metric-value">${total}</div></div>
+  <div class="metric"><div class="metric-label">Errores</div><div class="metric-value">${errores}</div><div class="metric-sub">${tasaErr}% tasa error</div></div>
+  <div class="metric"><div class="metric-label">Tiempo prom. por tanda</div><div class="metric-value">${promMins}min</div><div class="metric-sub">tiempo÷anteojos armados</div></div>
+</div>
+<div class="card">
+  <div class="card-title">Historial</div>
+  <div class="table-wrap">
+  ${data.length?`<table>
+    <thead><tr><th>Fecha</th><th>Turno</th><th>Tipo</th><th>Marca</th><th>Cant.</th><th>Tiempo</th><th>Error</th><th>Tipo error</th><th>Momento</th></tr></thead>
+    <tbody>${data.map(d=>`<tr>
+      <td>${d.fecha}</td>
+      <td><span class="badge ${d.turno==='manana'?'badge-amber':'badge-blue'}">${d.turno==='manana'?'Mañana':'Tarde'}</span></td>
+      <td>${d.tipo}</td><td>${d.marca}</td><td>${d.cantidad}</td>
+      <td>${d.mins?d.mins+'min':'-'}</td>
+      <td>${d.error?'<span class="badge badge-red">Sí</span>':'<span class="badge badge-green">No</span>'}</td>
+      <td style="font-size:12px">${d.tipo_error||'-'}</td>
+      <td style="font-size:12px">${d.momento_error||'-'}</td>
+    </tr>`).join('')}</tbody>
+  </table>`:'<p style="color:var(--text3);font-size:13px;padding:1rem 0">Sin trabajos registrados aún.</p>'}
+  </div>
+</div>`;
+}
+
+// ====== PRODUCCION ADMIN ======
+function renderProduccionAdmin(){
+  const data=state.produccion;
+  const total=data.length;
+  const errores=data.filter(d=>d.error);
+  const tasaErr=total?((errores.length/total)*100).toFixed(1):0;
+  const conTiempo=data.filter(d=>d.mins>0&&d.cantidad>0);
+  const promMins=conTiempo.length?Math.round(conTiempo.reduce((s,d)=>s+(d.mins/d.cantidad),0)/conTiempo.length):0;
+
+  const tiposErr={};
+  errores.forEach(e=>{tiposErr[e.tipo_error]=(tiposErr[e.tipo_error]||0)+1});
+  const momentosErr={};
+  errores.forEach(e=>{momentosErr[e.momento_error]=(momentosErr[e.momento_error]||0)+1});
+
+  const tiemposPorTipo={};
+  data.filter(d=>d.mins>0&&d.cantidad>0).forEach(d=>{
+    if(!tiemposPorTipo[d.tipo])tiemposPorTipo[d.tipo]=[];
+    tiemposPorTipo[d.tipo].push(d.mins/d.cantidad);
+  });
+
+  const tiposLabel={graduacion_incorrecta:'Grad. incorrecta',centrado:'Centrado',aranazo:'Rayado',material:'Material',montaje:'Montaje',otro:'Otro'};
+  const momentosLabel={proceso:'Durante proceso',control_final:'Control final',entrega:'Entrega',postventa:'Post-venta'};
+
+  return `
+<div class="section-header">
+  <div><div class="section-title">Producción — Fernando</div></div>
+</div>
+<div class="metric-grid">
+  <div class="metric"><div class="metric-label">Total anteojos</div><div class="metric-value">${total}</div></div>
+  <div class="metric"><div class="metric-label">Con errores</div><div class="metric-value">${errores.length}</div><div class="metric-sub">${tasaErr}% tasa</div></div>
+  <div class="metric"><div class="metric-label">Tiempo prom. por anteojo</div><div class="metric-value">${promMins}min</div><div class="metric-sub">tiempo÷cantidad por tanda</div></div>
+</div>
+${Object.keys(tiemposPorTipo).length?`
+<div class="card">
+  <div class="card-title">Tiempo promedio por tipo (min)</div>
+  <div style="display:flex;flex-wrap:wrap;gap:10px">
+    ${Object.entries(tiemposPorTipo).map(([tipo,arr])=>{
+      const prom=Math.round(arr.reduce((s,v)=>s+v,0)/arr.length);
+      return `<div class="metric" style="flex:1;min-width:120px"><div class="metric-label">${tipo}</div><div class="metric-value">${prom}min</div><div class="metric-sub">${arr.length} trabajos</div></div>`;
+    }).join('')}
+  </div>
+</div>`:''}
+${errores.length?`
+<div class="card">
+  <div class="card-title">Análisis de errores</div>
+  <div class="form-grid">
+    <div>
+      <div style="font-size:12px;font-weight:500;color:var(--text2);margin-bottom:8px">Por tipo de error</div>
+      ${Object.entries(tiposErr).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border2)">
+          <span style="font-size:13px">${tiposLabel[k]||k}</span>
+          <span class="badge badge-red">${v}</span>
+        </div>`).join('')}
+    </div>
+    <div>
+      <div style="font-size:12px;font-weight:500;color:var(--text2);margin-bottom:8px">Por momento en que surge</div>
+      ${Object.entries(momentosErr).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border2)">
+          <span style="font-size:13px">${momentosLabel[k]||k}</span>
+          <span class="badge badge-amber">${v}</span>
+        </div>`).join('')}
+    </div>
+  </div>
+</div>`:'<div class="card"><p style="color:var(--text3);font-size:13px">Sin errores registrados.</p></div>'}
+<div class="card">
+  <div class="card-title">Todos los trabajos</div>
+  <div class="table-wrap">
+    ${data.length?`<table>
+      <thead><tr><th>Fecha</th><th>Turno</th><th>Tipo</th><th>Cant.</th><th>Tiempo</th><th>Error</th><th>Tipo error</th><th>Momento</th></tr></thead>
+      <tbody>${data.slice().reverse().map(d=>`<tr>
+        <td>${d.fecha}</td>
+        <td><span class="badge ${d.turno==='manana'?'badge-amber':'badge-blue'}">${d.turno==='manana'?'Mañana':'Tarde'}</span></td>
+        <td>${d.tipo}</td><td>${d.cantidad}</td>
+        <td>${d.mins?d.mins+'min':'-'}</td>
+        <td>${d.error?'<span class="badge badge-red">Sí</span>':'<span class="badge badge-green">No</span>'}</td>
+        <td style="font-size:12px">${d.tipo_error?tiposLabel[d.tipo_error]||d.tipo_error:'-'}</td>
+        <td style="font-size:12px">${d.momento_error?momentosLabel[d.momento_error]||d.momento_error:'-'}</td>
+      </tr>`).join('')}</tbody>
+    </table>`:'<p style="color:var(--text3);font-size:13px;padding:1rem 0">Sin trabajos registrados aún.</p>'}
+  </div>
+</div>`;
+}
+
+// ====== DASHBOARD ======
+function renderDashboard(){
+  const now=new Date();
+  const mes=now.toISOString().slice(0,7);
+  const aten=state.atenciones;
+  const prod=state.produccion;
+
+  const porMes=aten.filter(a=>a.fecha.startsWith(mes));
+  const ventas=porMes.filter(a=>a.resultado==='venta');
+  const presupuestos=porMes.filter(a=>a.resultado==='presupuesto');
+  const totalV=ventas.reduce((s,v)=>s+v.monto,0);
+  const conv=porMes.length?((ventas.length/porMes.length)*100).toFixed(0):0;
+
+  const vpPaola=ventas.filter(v=>v.vendedora==='paola');
+  const vpPaula=ventas.filter(v=>v.vendedora==='paula');
+  const apPaola=porMes.filter(v=>v.vendedora==='paola');
+  const apPaula=porMes.filter(v=>v.vendedora==='paula');
+
+  const fidVentas=ventas.filter(v=>v.origen==='fidelizacion').length;
+  const totalExtras=ventas.filter(v=>v.extras&&v.extras.length>0).length;
+  const totalErr=prod.filter(p=>p.error).length;
+  const tasaErr=prod.length?((totalErr/prod.length)*100).toFixed(1):0;
+
+  // ---- Resumen de accesorios/insumos/arreglos ----
+  const extrasResumen={};
+  let extrasTotalCount=0;
+  let extrasTotalMonto=0;
+  ventas.forEach(v=>{
+    if(!v.extras||!v.extras.length)return;
+    v.extras.forEach(e=>{
+      if(!extrasResumen[e.tipo])extrasResumen[e.tipo]={count:0,monto:0};
+      extrasResumen[e.tipo].count++;
+      extrasResumen[e.tipo].monto+=(e.monto||0);
+      extrasTotalCount++;
+      extrasTotalMonto+=(e.monto||0);
+    });
+  });
+  const tiposExtraLabel={accesorio:'Accesorio',insumo:'Insumo',arreglo:'Arreglo/reparación',limpieza:'Kit limpieza',estuche:'Estuche',cordon:'Cordón/cadena',otro:'Otro'};
+
+  return `
+<div class="section-header">
+  <div><div class="section-title">Dashboard KPI</div><div class="section-subtitle">${now.toLocaleString('es-AR',{month:'long',year:'numeric'})}</div></div>
+  <button class="btn-secondary" onclick="exportarExcel()">Exportar a Excel</button>
+</div>
+<div class="metric-grid">
+  <div class="metric"><div class="metric-label">Total atenciones</div><div class="metric-value">${porMes.length}</div><div class="metric-sub">este mes</div></div>
+  <div class="metric"><div class="metric-label">Ventas</div><div class="metric-value">${ventas.length}</div><div class="metric-sub">${conv}% conversión</div></div>
+  <div class="metric"><div class="metric-label">Total vendido</div><div class="metric-value">$${Math.round(totalV).toLocaleString('es-AR')}</div></div>
+  <div class="metric"><div class="metric-label">Ticket promedio</div><div class="metric-value">$${ventas.length?Math.round(totalV/ventas.length).toLocaleString('es-AR'):0}</div></div>
+  <div class="metric"><div class="metric-label">Presupuestos</div><div class="metric-value">${presupuestos.length}</div><div class="metric-sub">sin cerrar</div></div>
+  <div class="metric"><div class="metric-label">Fidelización → venta</div><div class="metric-value">${fidVentas}</div><div class="metric-sub">conversiones</div></div>
+  <div class="metric"><div class="metric-label">Con accesorios</div><div class="metric-value">${totalExtras}</div><div class="metric-sub">ventas con extras</div></div>
+</div>
+
+<div class="card" style="margin-bottom:1rem">
+  <div class="card-title">Accesorios, insumos y arreglos — mes actual</div>
+  <div class="metric-grid" style="margin-bottom:${Object.keys(extrasResumen).length?'1rem':'0'}">
+    <div class="metric"><div class="metric-label">Ítems vendidos</div><div class="metric-value">${extrasTotalCount}</div><div class="metric-sub">unidades</div></div>
+    <div class="metric"><div class="metric-label">Facturación extras</div><div class="metric-value">$${extrasTotalMonto.toLocaleString('es-AR')}</div><div class="metric-sub">ingresos por extras</div></div>
+  </div>
+  ${Object.keys(extrasResumen).length?`<div class="metric-grid">
+    ${Object.entries(extrasResumen).map(([tipo,d])=>`
+      <div class="metric">
+        <div class="metric-label">${tiposExtraLabel[tipo]||tipo}</div>
+        <div class="metric-value">${d.count}</div>
+        <div class="metric-sub">$${d.monto.toLocaleString('es-AR')}</div>
+      </div>`).join('')}
+  </div>`:'<p style="font-size:13px;color:var(--text3)">Sin accesorios registrados este mes.</p>'}
+</div>
+
+<div class="dash-grid-2">
+  <div class="card">
+    <div class="card-title">Paola</div>
+    <div class="metric-grid">
+      <div class="metric"><div class="metric-label">Atenciones</div><div class="metric-value">${apPaola.length}</div></div>
+      <div class="metric"><div class="metric-label">Ventas</div><div class="metric-value">${vpPaola.length}</div></div>
+      <div class="metric"><div class="metric-label">Conversión</div><div class="metric-value">${apPaola.length?((vpPaola.length/apPaola.length)*100).toFixed(0):0}%</div></div>
+      <div class="metric"><div class="metric-label">Total</div><div class="metric-value" style="font-size:16px">$${vpPaola.reduce((s,v)=>s+v.monto,0).toLocaleString('es-AR')}</div></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">Paula</div>
+    <div class="metric-grid">
+      <div class="metric"><div class="metric-label">Atenciones</div><div class="metric-value">${apPaula.length}</div></div>
+      <div class="metric"><div class="metric-label">Ventas</div><div class="metric-value">${vpPaula.length}</div></div>
+      <div class="metric"><div class="metric-label">Conversión</div><div class="metric-value">${apPaula.length?((vpPaula.length/apPaula.length)*100).toFixed(0):0}%</div></div>
+      <div class="metric"><div class="metric-label">Total</div><div class="metric-value" style="font-size:16px">$${vpPaula.reduce((s,v)=>s+v.monto,0).toLocaleString('es-AR')}</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="dash-grid-2">
+  <div class="card">
+    <div class="card-title">Tipos de lente vendidos</div>
+    <div class="chart-wrap" style="height:200px"><canvas id="chart-tipos"></canvas></div>
+  </div>
+  <div class="card">
+    <div class="card-title">Origen de ventas</div>
+    <div class="chart-wrap" style="height:200px"><canvas id="chart-origen"></canvas></div>
+  </div>
+</div>
+
+<div class="dash-grid-2">
+  <div class="card">
+    <div class="card-title">Ventas por vendedora — tipo de lente</div>
+    <div class="chart-wrap" style="height:220px"><canvas id="chart-vendedora-tipo"></canvas></div>
+  </div>
+  <div class="card">
+    <div class="card-title">Producción — errores por tipo</div>
+    <div class="metric" style="margin-bottom:10px"><div class="metric-label">Tasa de error</div><div class="metric-value">${tasaErr}%</div><div class="metric-sub">${totalErr} de ${prod.length} trabajos</div></div>
+    <div class="chart-wrap" style="height:160px"><canvas id="chart-errores"></canvas></div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-title">Atenciones por día — mes actual</div>
+  <div class="chart-wrap" style="height:180px"><canvas id="chart-dias"></canvas></div>
+</div>`;
+}
+
+function renderCharts(){
+  const mes=new Date().toISOString().slice(0,7);
+  const aten=state.atenciones;
+  const ventas=aten.filter(a=>a.resultado==='venta'&&a.fecha.startsWith(mes));
+  const prod=state.produccion;
+
+  const COLORS=['#2C5F4A','#4A8C6E','#C17A1A','#1A5276','#8C3A4A','#7A6A2C'];
+
+  // tipos de lente
+  const tiposCnt={};
+  ventas.forEach(v=>{tiposCnt[v.tipo_lente]=(tiposCnt[v.tipo_lente]||0)+1});
+  const tiposLabels=Object.keys(tiposCnt);
+  if(tiposLabels.length&&document.getElementById('chart-tipos')){
+    new Chart(document.getElementById('chart-tipos'),{
+      type:'doughnut',
+      data:{labels:tiposLabels,datasets:[{data:tiposLabels.map(k=>tiposCnt[k]),backgroundColor:COLORS,borderWidth:0}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{font:{size:11},boxWidth:10}}}}
+    });
+  }
+
+  // origen
+  const origenCnt={};
+  ventas.forEach(v=>{origenCnt[v.origen]=(origenCnt[v.origen]||0)+1});
+  const origenLabel={espontaneo:'Espontáneo',fidelizacion:'Fidelización',marketing:'Marketing',derivacion:'Derivación',pami_convenio:'PAMI conv.',otro:'Otro'};
+  const oL=Object.keys(origenCnt);
+  if(oL.length&&document.getElementById('chart-origen')){
+    new Chart(document.getElementById('chart-origen'),{
+      type:'pie',
+      data:{labels:oL.map(k=>origenLabel[k]||k),datasets:[{data:oL.map(k=>origenCnt[k]),backgroundColor:COLORS,borderWidth:0}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{font:{size:11},boxWidth:10}}}}
+    });
+  }
+
+  // vendedora x tipo
+  const tipos=['monofocal','bifocal','multifocal','ocupacional','sol'];
+  const vPaola=tipos.map(t=>ventas.filter(v=>v.vendedora==='paola'&&v.tipo_lente===t).length);
+  const vPaula=tipos.map(t=>ventas.filter(v=>v.vendedora==='paula'&&v.tipo_lente===t).length);
+  if(document.getElementById('chart-vendedora-tipo')){
+    new Chart(document.getElementById('chart-vendedora-tipo'),{
+      type:'bar',
+      data:{labels:tipos,datasets:[
+        {label:'Paola',data:vPaola,backgroundColor:'#2C5F4A'},
+        {label:'Paula',data:vPaula,backgroundColor:'#1A5276'},
+      ]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{font:{size:11},boxWidth:10}}},scales:{x:{ticks:{font:{size:11}}},y:{ticks:{stepSize:1}}}}
+    });
+  }
+
+  // errores produccion
+  const errCnt={};
+  prod.filter(p=>p.error).forEach(p=>{errCnt[p.tipo_error]=(errCnt[p.tipo_error]||0)+1});
+  const eL=Object.keys(errCnt);
+  const tiposErrLabel={graduacion_incorrecta:'Grad. incorrecta',centrado:'Centrado',aranazo:'Rayado',material:'Material',montaje:'Montaje',otro:'Otro'};
+  if(document.getElementById('chart-errores')){
+    if(eL.length){
+      new Chart(document.getElementById('chart-errores'),{
+        type:'bar',
+        data:{labels:eL.map(k=>tiposErrLabel[k]||k),datasets:[{data:eL.map(k=>errCnt[k]),backgroundColor:'#C04530',borderWidth:0}]},
+        options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{ticks:{stepSize:1,font:{size:11}}},y:{ticks:{font:{size:11}}}}}
+      });
+    }
+  }
+
+  // por día
+  const daysInMonth=new Date(new Date().getFullYear(),new Date().getMonth()+1,0).getDate();
+  const dayLabels=Array.from({length:daysInMonth},(_,i)=>i+1);
+  const porDia=dayLabels.map(d=>{
+    const dd=String(d).padStart(2,'0');
+    return aten.filter(a=>a.fecha===`${mes}-${dd}`).length;
+  });
+  if(document.getElementById('chart-dias')){
+    new Chart(document.getElementById('chart-dias'),{
+      type:'bar',
+      data:{labels:dayLabels,datasets:[{label:'Atenciones',data:porDia,backgroundColor:'#4A8C6E',borderWidth:0}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:10},autoSkip:false,maxRotation:0}},y:{ticks:{stepSize:1}}}}
+    });
+  }
+}
+
+// ====== CONFIG ======
+function renderConfig(){
+  return `
+<div class="section-header">
+  <div><div class="section-title">Configuración</div></div>
+</div>
+<div class="card">
+  <div class="card-title">Marcas de armazones</div>
+  <div class="tag-list" id="marcas-list"></div>
+  <div class="add-tag-row"><input id="new-marca" placeholder="Nueva marca..."><button class="btn-add-tag" onclick="addMarca()">Agregar</button></div>
+</div>
+<div class="card">
+  <div class="card-title">Marcas de lentes</div>
+  <div class="tag-list" id="lentes-marcas-list"></div>
+  <div class="add-tag-row"><input id="new-lente-marca" placeholder="Nueva marca..."><button class="btn-add-tag" onclick="addLenteMarca()">Agregar</button></div>
+</div>
+<div class="card">
+  <div class="card-title">Exportar datos</div>
+  <div style="display:flex;gap:10px;flex-wrap:wrap">
+    <button class="btn-secondary" onclick="exportarExcel()">Exportar ventas a Excel</button>
+    <button class="btn-secondary" onclick="exportarProduccion()">Exportar producción a Excel</button>
+  </div>
+</div>`;
+}
+
+function renderConfigTags(){
+  const ml=document.getElementById('marcas-list');
+  const ll=document.getElementById('lentes-marcas-list');
+  if(ml)ml.innerHTML=state.marcas.map((m,i)=>`<div class="tag">${m}<button class="tag-remove" onclick="removeMarca(${i})">×</button></div>`).join('');
+  if(ll)ll.innerHTML=state.lentesMarcas.map((m,i)=>`<div class="tag">${m}<button class="tag-remove" onclick="removeLenteMarca(${i})">×</button></div>`).join('');
+}
+
+function addMarca(){
+  const v=document.getElementById('new-marca').value.trim();
+  if(!v)return;
+  state.marcas.push(v);save('marcas');
+  document.getElementById('new-marca').value='';
+  renderConfigTags();showToast('Marca agregada');
+}
+function removeMarca(i){state.marcas.splice(i,1);save('marcas');renderConfigTags()}
+function addLenteMarca(){
+  const v=document.getElementById('new-lente-marca').value.trim();
+  if(!v)return;
+  state.lentesMarcas.push(v);save('lentesMarcas');
+  document.getElementById('new-lente-marca').value='';
+  renderConfigTags();showToast('Marca agregada');
+}
+function removeLenteMarca(i){state.lentesMarcas.splice(i,1);save('lentesMarcas');renderConfigTags()}
+
+// ====== EXPORT EXCEL ======
+function exportarExcel(){
+  const rows=[['Fecha','Hora','Vendedora','Cliente','Teléfono','Origen','Fidelización','PAMI','Resultado','Tipo lente','Marca lente','Marca armazón','Monto','Extras','Tipo ppto','Monto ppto','Notas','Seg. estado']];
+  state.atenciones.forEach(a=>{
+    const extrasStr=a.extras&&a.extras.length?a.extras.map(e=>`${e.tipo}:${e.desc||''}($${e.monto||0})`).join(' | '):'';
+    rows.push([a.fecha,a.hora,a.vendedora,a.cliente,a.tel,a.origen,a.fid_tipo||'',a.pami,a.resultado,a.tipo_lente,a.marca_lente,a.marca_armazon,a.monto,extrasStr,a.tipo_ppto,a.monto_ppto,a.notas,a.seg_estado]);
+  });
+  downloadCSV(rows,'ventas_optica.csv');
+  showToast('Exportando ventas...');
+}
+
+function exportarProduccion(){
+  const rows=[['Fecha','Turno','Hora inicio','Hora fin','Minutos','Tipo','Marca','Cantidad','Error','Tipo error','Momento error','Descripción error','Notas']];
+  state.produccion.forEach(p=>{
+    rows.push([p.fecha,p.turno,p.inicio,p.fin,p.mins,p.tipo,p.marca,p.cantidad,p.error?'Sí':'No',p.tipo_error||'',p.momento_error||'',p.desc_error||'',p.notas]);
+  });
+  downloadCSV(rows,'produccion_optica.csv');
+  showToast('Exportando producción...');
+}
+
+function downloadCSV(rows,filename){
+  const csv=rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);a.download=filename;a.click();
+}
+
+// ====== UTILS ======
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2500);
+}
+function closeModal(id){document.getElementById(id).classList.remove('open')}
+function openModal(id){document.getElementById(id).classList.add('open')}
+</script>
+</body>
+</html>
