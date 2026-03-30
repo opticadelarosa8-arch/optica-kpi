@@ -365,6 +365,7 @@ const FIREBASE_CONFIG = {
 
 let db = null;
 let unsubscribers = [];
+let loginUsersUnsub = null;
 
 // ====== STATE ======
 const DEFAULT_USUARIOS = {
@@ -397,6 +398,7 @@ function save(key){
       db.collection('data').doc('config').set({marcas:state.marcas,lentesMarcas:state.lentesMarcas}).catch(console.error);
     } else if(key==='usuarios'){
       db.collection('data').doc('usuarios').set({usuarios:USERS}).catch(console.error);
+      localStorage.setItem('kpi_usuarios',JSON.stringify(USERS));
     }
   } else {
     const lsKey = key==='lentesMarcas' ? 'kpi_lentes_marcas' : 'kpi_'+key;
@@ -427,6 +429,7 @@ function doLogin(){
   if(!USERS[u]||USERS[u].pass!==p){err.style.display='block';err.textContent='Contraseña incorrecta';return}
   err.style.display='none';
   currentUser=u;
+  if(loginUsersUnsub){loginUsersUnsub();loginUsersUnsub=null;}
   document.getElementById('login-screen').style.display='none';
   if(FIREBASE_CONFIG.projectId)document.getElementById('loading-screen').classList.add('show');
   setupFirestoreListeners(()=>{
@@ -440,7 +443,30 @@ function doLogin(){
   });
 }
 document.getElementById('login-pass').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin()});
+
 populateLoginUsers();
+if(FIREBASE_CONFIG.projectId){
+  const CDN='https://www.gstatic.com/firebasejs/9.23.0/';
+  Promise.all([
+    loadScript(CDN+'firebase-app-compat.js'),
+    loadScript(CDN+'firebase-firestore-compat.js')
+  ]).then(()=>{
+    if(!db){
+      if(!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
+      db=firebase.firestore();
+    }
+    if(loginUsersUnsub)loginUsersUnsub();
+    loginUsersUnsub=db.collection('data').doc('usuarios').onSnapshot(snap=>{
+      if(snap&&snap.exists&&snap.data().usuarios){
+        const fetched=snap.data().usuarios;
+        Object.keys(USERS).forEach(k=>delete USERS[k]);
+        Object.assign(USERS,fetched);
+        localStorage.setItem('kpi_usuarios',JSON.stringify(USERS));
+        populateLoginUsers();
+      }
+    },e=>console.error('[login-users]',e));
+  }).catch(e=>console.error('[login-users-init]',e));
+}
 
 function doLogout(){
   unsubscribers.forEach(unsub=>unsub());
@@ -556,6 +582,7 @@ function _setupListeners(onReady){
       if(snap.exists&&snap.data().usuarios){
         Object.keys(USERS).forEach(k=>delete USERS[k]);
         Object.assign(USERS,snap.data().usuarios);
+        localStorage.setItem('kpi_usuarios',JSON.stringify(USERS));
       }
       checkReady();
     },console.error);
