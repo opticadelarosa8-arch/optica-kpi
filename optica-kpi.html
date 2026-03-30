@@ -366,6 +366,9 @@ const FIREBASE_CONFIG = {
 let db = null;
 let unsubscribers = [];
 let loginUsersUnsub = null;
+const LOCALES = {rosa:'Óp. De la Rosa', banda:'OpticBanda'};
+let dashLocal = 'todas';
+let cierresLocalFiltro = 'todas';
 
 // ====== STATE ======
 const DEFAULT_USUARIOS = {
@@ -1364,11 +1367,17 @@ ${errores.length?`
 }
 
 // ====== DASHBOARD ======
+function setDashLocal(val){dashLocal=val;goTab('dashboard');}
 function renderDashboard(){
   const now=new Date();
   const mes=now.toISOString().slice(0,7);
-  const aten=state.atenciones;
-  const prod=state.produccion;
+  const allAten=state.atenciones;
+  const allProd=state.produccion;
+
+  // filtro por local
+  const enLocal=u=>dashLocal==='todas'||(USERS[u]?.local||'')=== dashLocal;
+  const aten=allAten.filter(a=>enLocal(a.vendedora));
+  const prod=allProd.filter(p=>enLocal(p.usuario));
 
   const porMes=aten.filter(a=>a.fecha.startsWith(mes));
   const ventas=porMes.filter(a=>a.resultado==='venta');
@@ -1376,15 +1385,17 @@ function renderDashboard(){
   const totalV=ventas.reduce((s,v)=>s+v.monto,0);
   const conv=porMes.length?((ventas.length/porMes.length)*100).toFixed(0):0;
 
-  const vpPaola=ventas.filter(v=>v.vendedora==='paola');
-  const vpPaula=ventas.filter(v=>v.vendedora==='paula');
-  const apPaola=porMes.filter(v=>v.vendedora==='paola');
-  const apPaula=porMes.filter(v=>v.vendedora==='paula');
+  // vendedoras dinámicas por local
+  const vendedoras=Object.entries(USERS).filter(([,d])=>d.role==='vendedora'&&(dashLocal==='todas'||d.local===dashLocal));
 
   const fidVentas=ventas.filter(v=>v.origen==='fidelizacion').length;
   const totalExtras=ventas.filter(v=>v.extras&&v.extras.length>0).length;
   const totalErr=prod.filter(p=>p.error).length;
   const tasaErr=prod.length?((totalErr/prod.length)*100).toFixed(1):0;
+
+  const localBtns=`<div style="display:flex;gap:6px;flex-wrap:wrap">
+    ${['todas',...Object.keys(LOCALES)].map(k=>`<button onclick="setDashLocal('${k}')" style="padding:5px 14px;border-radius:20px;border:1.5px solid var(--primary);font-size:12px;font-family:var(--font-body);cursor:pointer;background:${dashLocal===k?'var(--primary)':'transparent'};color:${dashLocal===k?'white':'var(--primary)'}">${k==='todas'?'General':LOCALES[k]}</button>`).join('')}
+  </div>`;
 
   // ---- Resumen de accesorios/insumos/arreglos ----
   const extrasResumen={};
@@ -1407,6 +1418,7 @@ function renderDashboard(){
   <div><div class="section-title">Dashboard KPI</div><div class="section-subtitle">${now.toLocaleString('es-AR',{month:'long',year:'numeric'})}</div></div>
   <button class="btn-secondary" onclick="exportarExcel()">Exportar a Excel</button>
 </div>
+<div style="margin-bottom:1rem">${localBtns}</div>
 <div class="metric-grid">
   <div class="metric"><div class="metric-label">Total atenciones</div><div class="metric-value">${porMes.length}</div><div class="metric-sub">este mes</div></div>
   <div class="metric"><div class="metric-label">Ventas</div><div class="metric-value">${ventas.length}</div><div class="metric-sub">${conv}% conversión</div></div>
@@ -1433,26 +1445,22 @@ function renderDashboard(){
   </div>`:'<p style="font-size:13px;color:var(--text3)">Sin accesorios registrados este mes.</p>'}
 </div>
 
-<div class="dash-grid-2">
-  <div class="card">
-    <div class="card-title">Paola</div>
+${vendedoras.length?`<div class="dash-grid-2">
+  ${vendedoras.map(([u,d])=>{
+    const vp=ventas.filter(v=>v.vendedora===u);
+    const ap=porMes.filter(v=>v.vendedora===u);
+    const localTag=d.local&&LOCALES[d.local]?`<span style="font-size:11px;color:var(--text3);margin-left:8px">${LOCALES[d.local]}</span>`:'';
+    return `<div class="card">
+    <div class="card-title">${d.name}${localTag}</div>
     <div class="metric-grid">
-      <div class="metric"><div class="metric-label">Atenciones</div><div class="metric-value">${apPaola.length}</div></div>
-      <div class="metric"><div class="metric-label">Ventas</div><div class="metric-value">${vpPaola.length}</div></div>
-      <div class="metric"><div class="metric-label">Conversión</div><div class="metric-value">${apPaola.length?((vpPaola.length/apPaola.length)*100).toFixed(0):0}%</div></div>
-      <div class="metric"><div class="metric-label">Total</div><div class="metric-value" style="font-size:16px">$${vpPaola.reduce((s,v)=>s+v.monto,0).toLocaleString('es-AR')}</div></div>
+      <div class="metric"><div class="metric-label">Atenciones</div><div class="metric-value">${ap.length}</div></div>
+      <div class="metric"><div class="metric-label">Ventas</div><div class="metric-value">${vp.length}</div></div>
+      <div class="metric"><div class="metric-label">Conversión</div><div class="metric-value">${ap.length?((vp.length/ap.length)*100).toFixed(0):0}%</div></div>
+      <div class="metric"><div class="metric-label">Total</div><div class="metric-value" style="font-size:16px">$${vp.reduce((s,v)=>s+v.monto,0).toLocaleString('es-AR')}</div></div>
     </div>
-  </div>
-  <div class="card">
-    <div class="card-title">Paula</div>
-    <div class="metric-grid">
-      <div class="metric"><div class="metric-label">Atenciones</div><div class="metric-value">${apPaula.length}</div></div>
-      <div class="metric"><div class="metric-label">Ventas</div><div class="metric-value">${vpPaula.length}</div></div>
-      <div class="metric"><div class="metric-label">Conversión</div><div class="metric-value">${apPaula.length?((vpPaula.length/apPaula.length)*100).toFixed(0):0}%</div></div>
-      <div class="metric"><div class="metric-label">Total</div><div class="metric-value" style="font-size:16px">$${vpPaula.reduce((s,v)=>s+v.monto,0).toLocaleString('es-AR')}</div></div>
-    </div>
-  </div>
-</div>
+  </div>`;
+  }).join('')}
+</div>`:''}
 
 <div class="dash-grid-2">
   <div class="card">
@@ -1509,9 +1517,10 @@ ${(()=>{
 
 function renderCharts(){
   const mes=new Date().toISOString().slice(0,7);
-  const aten=state.atenciones;
+  const enLocal=u=>dashLocal==='todas'||(USERS[u]?.local||'')=== dashLocal;
+  const aten=state.atenciones.filter(a=>enLocal(a.vendedora));
   const ventas=aten.filter(a=>a.resultado==='venta'&&a.fecha.startsWith(mes));
-  const prod=state.produccion;
+  const prod=state.produccion.filter(p=>enLocal(p.usuario));
 
   const COLORS=['#2C5F4A','#4A8C6E','#C17A1A','#1A5276','#8C3A4A','#7A6A2C'];
 
@@ -1540,17 +1549,18 @@ function renderCharts(){
     });
   }
 
-  // vendedora x tipo
+  // vendedora x tipo — dinámico
   const tipos=['monofocal','bifocal','multifocal','ocupacional','sol'];
-  const vPaola=tipos.map(t=>ventas.filter(v=>v.vendedora==='paola'&&v.tipo_lente===t).length);
-  const vPaula=tipos.map(t=>ventas.filter(v=>v.vendedora==='paula'&&v.tipo_lente===t).length);
-  if(document.getElementById('chart-vendedora-tipo')){
+  const vendedorasChart=Object.entries(USERS).filter(([,d])=>d.role==='vendedora'&&(dashLocal==='todas'||(d.local||'')===dashLocal));
+  const CHART_COLORS=['#2C5F4A','#1A5276','#C17A1A','#8C3A4A'];
+  if(document.getElementById('chart-vendedora-tipo')&&vendedorasChart.length){
     new Chart(document.getElementById('chart-vendedora-tipo'),{
       type:'bar',
-      data:{labels:tipos,datasets:[
-        {label:'Paola',data:vPaola,backgroundColor:'#2C5F4A'},
-        {label:'Paula',data:vPaula,backgroundColor:'#1A5276'},
-      ]},
+      data:{labels:tipos,datasets:vendedorasChart.map(([u,d],i)=>({
+        label:d.name,
+        data:tipos.map(t=>ventas.filter(v=>v.vendedora===u&&v.tipo_lente===t).length),
+        backgroundColor:CHART_COLORS[i%CHART_COLORS.length]
+      }))},
       options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{font:{size:11},boxWidth:10}}},scales:{x:{ticks:{font:{size:11}}},y:{ticks:{stepSize:1}}}}
     });
   }
@@ -1596,6 +1606,10 @@ function renderConfig(){
       <td>${d.name}</td>
       <td><span class="badge ${d.role==='admin'?'badge-blue':d.role==='produccion'?'badge-amber':'badge-green'}">${ROLES_LABEL[d.role]||d.role}</span></td>
       <td style="text-align:center">${d.role==='vendedora'?`<label style="display:flex;align-items:center;gap:6px;justify-content:center;cursor:pointer"><input type="checkbox" ${d.cierre?'checked':''} onchange="toggleCierrePermiso('${u}')"><span style="font-size:12px">Cierre</span></label>`:'—'}</td>
+      <td><select onchange="cambiarLocal('${u}',this.value)" style="font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-family:var(--font-body);background:var(--bg1)">
+        <option value="" ${!d.local?'selected':''}>—</option>
+        ${Object.entries(LOCALES).map(([k,v])=>`<option value="${k}" ${d.local===k?'selected':''}>${v}</option>`).join('')}
+      </select></td>
       <td>
         <div style="display:flex;gap:6px">
           <button class="seg-btn seg-btn-pres" onclick="openModalCambiarPass('${u}')">Cambiar contraseña</button>
@@ -1622,7 +1636,7 @@ function renderConfig(){
   <div class="card-title">Usuarios</div>
   <div class="table-wrap" style="margin-bottom:1rem">
     <table>
-      <thead><tr><th>Usuario</th><th>Nombre</th><th>Rol</th><th>Cierre caja</th><th>Acciones</th></tr></thead>
+      <thead><tr><th>Usuario</th><th>Nombre</th><th>Rol</th><th>Cierre caja</th><th>Local</th><th>Acciones</th></tr></thead>
       <tbody>${usuariosRows}</tbody>
     </table>
   </div>
@@ -1870,9 +1884,11 @@ function editarCierre(inicio){
   goTab('cierre');
 }
 
+function setCierresLocal(val){cierresLocalFiltro=val;goTab('cierres-admin');}
 function renderCierresAdmin(){
-  const vendedoras=Object.entries(USERS).filter(([,d])=>d.role==='vendedora');
-  const cierres=[...state.cierres].sort((a,b)=>b.semana_inicio.localeCompare(a.semana_inicio));
+  const enLocalC=u=>cierresLocalFiltro==='todas'||(USERS[u]?.local||'')=== cierresLocalFiltro;
+  const vendedoras=Object.entries(USERS).filter(([,d])=>d.role==='vendedora'&&(cierresLocalFiltro==='todas'||(d.local||'')===cierresLocalFiltro));
+  const cierres=[...state.cierres].filter(c=>enLocalC(c.vendedora)).sort((a,b)=>b.semana_inicio.localeCompare(a.semana_inicio));
 
   // Últimos 3 meses — calcular semanas
   const now=new Date();
@@ -1899,10 +1915,15 @@ function renderCierresAdmin(){
     </tr>`;
   }).join(''):`<tr><td colspan="8" style="color:var(--text3);font-size:13px">Sin cierres registrados aún.</td></tr>`;
 
+  const localBtnsCierres=`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:1rem">
+    ${['todas',...Object.keys(LOCALES)].map(k=>`<button onclick="setCierresLocal('${k}')" style="padding:5px 14px;border-radius:20px;border:1.5px solid var(--primary);font-size:12px;font-family:var(--font-body);cursor:pointer;background:${cierresLocalFiltro===k?'var(--primary)':'transparent'};color:${cierresLocalFiltro===k?'white':'var(--primary)'}">${k==='todas'?'General':LOCALES[k]}</button>`).join('')}
+  </div>`;
+
   return `
 <div class="section-header">
   <div><div class="section-title">Cierres de caja</div><div class="section-subtitle">Historial y comparativas</div></div>
 </div>
+${localBtnsCierres}
 <div class="metric-grid">
   <div class="metric"><div class="metric-label">Cierres registrados</div><div class="metric-value">${cierres.length}</div><div class="metric-sub">total histórico</div></div>
   <div class="metric"><div class="metric-label">Promedio semanal</div><div class="metric-value">$${promSemanal.toLocaleString('es-AR')}</div><div class="metric-sub">por cierre</div></div>
@@ -1934,11 +1955,12 @@ function renderCierresAdmin(){
 
 function renderChartsCierres(){
   const COLORS=['#2C5F4A','#1A5276','#C17A1A','#8C3A4A'];
-  const cierres=[...state.cierres].sort((a,b)=>a.semana_inicio.localeCompare(b.semana_inicio));
+  const enLocalC=u=>cierresLocalFiltro==='todas'||(USERS[u]?.local||'')=== cierresLocalFiltro;
+  const cierres=[...state.cierres].filter(c=>enLocalC(c.vendedora)).sort((a,b)=>a.semana_inicio.localeCompare(b.semana_inicio));
 
   // Últimas 8 semanas con datos
   const semanas=[...new Set(cierres.map(c=>c.semana_inicio))].slice(-8);
-  const vendedoras=Object.entries(USERS).filter(([,d])=>d.role==='vendedora'&&d.cierre);
+  const vendedoras=Object.entries(USERS).filter(([,d])=>d.role==='vendedora'&&d.cierre&&(cierresLocalFiltro==='todas'||(d.local||'')===cierresLocalFiltro));
 
   if(document.getElementById('chart-cierres-semanas')&&semanas.length){
     const datasets=vendedoras.map(([u,d],i)=>({
@@ -1987,6 +2009,13 @@ function toggleCierrePermiso(username){
   showToast(USERS[username].cierre?`${USERS[username].name} puede registrar cierres`:`${USERS[username].name} ya no puede registrar cierres`);
   goTab('config');
 }
+function cambiarLocal(username,val){
+  USERS[username].local=val||undefined;
+  if(!val)delete USERS[username].local;
+  save('usuarios');
+  showToast(`Local actualizado para ${USERS[username].name}`);
+  goTab('config');
+}
 
 // ====== BORRAR TODOS LOS DATOS ======
 function confirmarBorrarDatos(){
@@ -1994,8 +2023,10 @@ function confirmarBorrarDatos(){
   if(val!=='BORRAR'){showToast('Escribí BORRAR para confirmar');return}
   state.atenciones=[];
   state.produccion=[];
+  state.cierres=[];
   save('atenciones');
   save('produccion');
+  save('cierres');
   closeModal('modal-borrar-datos');
   document.getElementById('borrar-confirm-input').value='';
   showToast('Todos los datos fueron eliminados');
