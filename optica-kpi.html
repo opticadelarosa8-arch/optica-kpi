@@ -369,6 +369,8 @@ let loginUsersUnsub = null;
 const LOCALES = {rosa:'Óp. De la Rosa', banda:'OpticBanda'};
 let dashLocal = 'todas';
 let cierresLocalFiltro = 'todas';
+let ventasLocal = 'todas';
+let ventasVendedora = 'todas';
 
 // ====== STATE ======
 const DEFAULT_USUARIOS = {
@@ -911,25 +913,43 @@ function limpiarForm(){
 }
 
 // ====== LISTA VENTAS ======
+function setVentasLocal(val){ventasLocal=val;ventasVendedora='todas';goTab('ventas-list');}
+function setVentasVendedora(val){ventasVendedora=val;goTab('ventas-list');}
+
 function renderVentasList(){
   const mes=new Date().toISOString().slice(0,7);
   const isAdmin=USERS[currentUser].role==='admin';
-  const data=state.atenciones.filter(a=>isAdmin?true:a.vendedora===currentUser);
+
+  // filtros
+  const enLocal=u=>ventasLocal==='todas'||(USERS[u]?.local||'')===ventasLocal;
+  const enVend=u=>ventasVendedora==='todas'||u===ventasVendedora;
+  const data=state.atenciones.filter(a=>isAdmin?(enLocal(a.vendedora)&&enVend(a.vendedora)):a.vendedora===currentUser);
+
   const porMes=data.filter(a=>a.fecha.startsWith(mes));
   const ventas=porMes.filter(a=>a.resultado==='venta');
   const presupuestos=porMes.filter(a=>a.resultado==='presupuesto');
   const totalVendido=ventas.reduce((s,v)=>s+v.monto,0);
   const conv=porMes.length?((ventas.length/porMes.length)*100).toFixed(0):0;
 
+  // vendedoras disponibles según local seleccionado
+  const vendedorasDisp=Object.entries(USERS).filter(([,d])=>d.role==='vendedora'&&(ventasLocal==='todas'||(d.local||'')===ventasLocal));
+
+  const btnStyle=(activo)=>`padding:5px 14px;border-radius:20px;border:1.5px solid var(--primary);font-size:12px;font-family:var(--font-body);cursor:pointer;background:${activo?'var(--primary)':'transparent'};color:${activo?'white':'var(--primary)'}`;
+
+  const localBtns=isAdmin?`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
+    ${['todas',...Object.keys(LOCALES)].map(k=>`<button onclick="setVentasLocal('${k}')" style="${btnStyle(ventasLocal===k)}">${k==='todas'?'General':LOCALES[k]}</button>`).join('')}
+  </div>`:'';
+
+  const vendBtns=isAdmin?`<div style="display:flex;gap:6px;flex-wrap:wrap">
+    <button onclick="setVentasVendedora('todas')" style="${btnStyle(ventasVendedora==='todas')}">Todos</button>
+    ${vendedorasDisp.map(([u,d])=>`<button onclick="setVentasVendedora('${u}')" style="${btnStyle(ventasVendedora===u)}">${d.name}${d.local&&LOCALES[d.local]?' · '+LOCALES[d.local]:''}</button>`).join('')}
+  </div>`:'';
+
   return `
 <div class="section-header">
   <div><div class="section-title">Registros</div><div class="section-subtitle">Mes actual</div></div>
-  ${isAdmin?`<div class="toggle-group">
-    <button class="toggle-btn active" onclick="filtrarVendedora('todas',this)">Todas</button>
-    <button class="toggle-btn" onclick="filtrarVendedora('paola',this)">Paola</button>
-    <button class="toggle-btn" onclick="filtrarVendedora('paula',this)">Paula</button>
-  </div>`:''}
 </div>
+${isAdmin?`<div style="margin-bottom:1rem">${localBtns}${vendBtns}</div>`:''}
 <div class="metric-grid">
   <div class="metric"><div class="metric-label">Atenciones</div><div class="metric-value">${porMes.length}</div><div class="metric-sub">este mes</div></div>
   <div class="metric"><div class="metric-label">Ventas</div><div class="metric-value">${ventas.length}</div><div class="metric-sub">conversiones</div></div>
@@ -940,10 +960,17 @@ function renderVentasList(){
 </div>
 <div class="card">
   <div class="card-title">Historial de atenciones</div>
-  <div class="table-wrap" id="tabla-ventas">
+  <div class="table-wrap">
   ${renderTablaAtenciones(data.slice().reverse())}
   </div>
 </div>`;
+}
+
+const BADGE_COLORS=['badge-blue','badge-purple','badge-green','badge-amber'];
+function badgeVendedora(username){
+  const keys=Object.keys(USERS).filter(u=>USERS[u].role==='vendedora');
+  const idx=keys.indexOf(username);
+  return BADGE_COLORS[idx>=0?idx%BADGE_COLORS.length:1];
 }
 
 function renderTablaAtenciones(data){
@@ -955,7 +982,7 @@ function renderTablaAtenciones(data){
       return `<tr>
       <td>${a.fecha}</td>
       <td>${a.hora}</td>
-      <td><span class="badge ${a.vendedora==='paola'?'badge-blue':'badge-purple'}">${USERS[a.vendedora]?.name||a.vendedora}</span></td>
+      <td><span class="badge ${badgeVendedora(a.vendedora)}">${USERS[a.vendedora]?.name||a.vendedora}</span></td>
       <td>${a.cliente}</td>
       <td>${badgeOrigen(a.origen)}</td>
       <td>${a.pami==='si'?'<span class="pami-tag">PAMI</span>':'-'}</td>
@@ -966,13 +993,6 @@ function renderTablaAtenciones(data){
       <td style="max-width:140px;color:var(--text2);font-size:12px">${a.notas||'-'}</td>
     </tr>`;}).join('')}</tbody>
   </table>`;
-}
-
-function filtrarVendedora(v,btn){
-  document.querySelectorAll('.toggle-btn').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active');
-  const data=state.atenciones.filter(a=>v==='todas'?true:a.vendedora===v);
-  document.getElementById('tabla-ventas').innerHTML=renderTablaAtenciones(data.slice().reverse());
 }
 
 function badgeOrigen(o){
@@ -1954,47 +1974,62 @@ ${localBtnsCierres}
 }
 
 function renderChartsCierres(){
-  const COLORS=['#2C5F4A','#1A5276','#C17A1A','#8C3A4A'];
+  const COLORS_VEND=['#2C5F4A','#1A5276','#C17A1A','#8C3A4A','#6A3A8C','#3A6A8C'];
+  const COLORS_LOCAL={'rosa':'#C04530','banda':'#1A5276'};
   const enLocalC=u=>cierresLocalFiltro==='todas'||(USERS[u]?.local||'')=== cierresLocalFiltro;
   const cierres=[...state.cierres].filter(c=>enLocalC(c.vendedora)).sort((a,b)=>a.semana_inicio.localeCompare(b.semana_inicio));
-
-  // Últimas 8 semanas con datos
   const semanas=[...new Set(cierres.map(c=>c.semana_inicio))].slice(-8);
   const vendedoras=Object.entries(USERS).filter(([,d])=>d.role==='vendedora'&&d.cierre&&(cierresLocalFiltro==='todas'||(d.local||'')===cierresLocalFiltro));
 
+  // Gráfico semanal: si es "todas" agrupa por local, si es un local específico muestra por vendedora
   if(document.getElementById('chart-cierres-semanas')&&semanas.length){
-    const datasets=vendedoras.map(([u,d],i)=>({
-      label:d.name,
-      data:semanas.map(s=>{
-        const c=cierres.find(x=>x.vendedora===u&&x.semana_inicio===s);
-        return c?c.total_registrado:null;
-      }),
-      backgroundColor:COLORS[i%COLORS.length],
-      spanGaps:false
-    }));
+    let datasets;
+    if(cierresLocalFiltro==='todas'){
+      // una barra por local
+      datasets=Object.entries(LOCALES).map(([loc,label])=>({
+        label,
+        data:semanas.map(s=>cierres.filter(c=>(USERS[c.vendedora]?.local||'')===loc&&c.semana_inicio===s).reduce((sum,c)=>sum+c.total_registrado,0)||null),
+        backgroundColor:COLORS_LOCAL[loc]||'#888',
+        spanGaps:false
+      }));
+    } else {
+      // una barra por vendedora
+      datasets=vendedoras.map(([u,d],i)=>({
+        label:d.name,
+        data:semanas.map(s=>{const c=cierres.find(x=>x.vendedora===u&&x.semana_inicio===s);return c?c.total_registrado:null;}),
+        backgroundColor:COLORS_VEND[i%COLORS_VEND.length],
+        spanGaps:false
+      }));
+    }
     new Chart(document.getElementById('chart-cierres-semanas'),{
       type:'bar',
-      data:{labels:semanas.map(s=>{const wb=getWeekBounds(new Date(s+'T12:00:00'));return semanaLabel(wb.inicio,wb.fin).split(' al ')[0];}),datasets},
+      data:{labels:semanas.map(s=>semanaLabel(s,getWeekBounds(new Date(s+'T12:00:00')).fin).split(' al ')[0]),datasets},
       options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{font:{size:11},boxWidth:10}}},scales:{x:{ticks:{font:{size:10}}},y:{ticks:{callback:v=>'$'+v.toLocaleString('es-AR')}}}}
     });
   }
 
-  // Comparativa mensual — últimos 6 meses
+  // Gráfico mensual: si es "todas" compara los dos locales, si es un local muestra por vendedora
   const meses=[];
-  for(let i=5;i>=0;i--){
-    const d=new Date();d.setDate(1);d.setMonth(d.getMonth()-i);
-    meses.push(d.toISOString().slice(0,7));
-  }
+  for(let i=5;i>=0;i--){const d=new Date();d.setDate(1);d.setMonth(d.getMonth()-i);meses.push(d.toISOString().slice(0,7));}
   if(document.getElementById('chart-cierres-meses')){
-    const datasets=vendedoras.map(([u,d],i)=>({
-      label:d.name,
-      data:meses.map(m=>cierres.filter(c=>c.vendedora===u&&c.semana_inicio.startsWith(m)).reduce((s,c)=>s+c.total_registrado,0)||null),
-      borderColor:COLORS[i%COLORS.length],
-      backgroundColor:COLORS[i%COLORS.length]+'33',
-      tension:0.3,
-      fill:false,
-      spanGaps:false
-    }));
+    let datasets;
+    if(cierresLocalFiltro==='todas'){
+      datasets=Object.entries(LOCALES).map(([loc,label])=>({
+        label,
+        data:meses.map(m=>cierres.filter(c=>(USERS[c.vendedora]?.local||'')===loc&&c.semana_inicio.startsWith(m)).reduce((s,c)=>s+c.total_registrado,0)||null),
+        borderColor:COLORS_LOCAL[loc]||'#888',
+        backgroundColor:(COLORS_LOCAL[loc]||'#888')+'33',
+        tension:0.3,fill:false,spanGaps:false
+      }));
+    } else {
+      datasets=vendedoras.map(([u,d],i)=>({
+        label:d.name,
+        data:meses.map(m=>cierres.filter(c=>c.vendedora===u&&c.semana_inicio.startsWith(m)).reduce((s,c)=>s+c.total_registrado,0)||null),
+        borderColor:COLORS_VEND[i%COLORS_VEND.length],
+        backgroundColor:COLORS_VEND[i%COLORS_VEND.length]+'33',
+        tension:0.3,fill:false,spanGaps:false
+      }));
+    }
     new Chart(document.getElementById('chart-cierres-meses'),{
       type:'line',
       data:{labels:meses.map(m=>{const[y,mo]=m.split('-');return new Date(y,mo-1).toLocaleDateString('es-AR',{month:'short',year:'2-digit'});}),datasets},
