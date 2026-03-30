@@ -326,6 +326,30 @@ tr:hover td{background:var(--surface2)}
   </div>
 </div>
 
+<!-- MODAL RETIRO -->
+<div class="modal-bg" id="modal-retiro">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">Confirmar retiro</span>
+      <button class="modal-close" onclick="closeModal('modal-retiro')">×</button>
+    </div>
+    <div id="retiro-info" style="background:var(--bg2);border-radius:8px;padding:12px 14px;margin-bottom:1rem;font-size:14px"></div>
+    <div class="form-group" style="margin-bottom:1rem">
+      <label>Forma de pago del saldo</label>
+      <select id="retiro-metodo" style="width:100%">
+        <option value="efectivo">Efectivo</option>
+        <option value="transferencia">Transferencia</option>
+        <option value="tarjeta_debito">Tarjeta débito</option>
+        <option value="tarjeta_credito">Tarjeta crédito</option>
+      </select>
+    </div>
+    <div style="display:flex;gap:10px;justify-content:flex-end">
+      <button class="btn-secondary" onclick="closeModal('modal-retiro')">Cancelar</button>
+      <button class="btn-save" onclick="confirmarRetiro()">Confirmar retiro</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL CONFIG -->
 <div class="modal-bg" id="modal-config">
   <div class="modal">
@@ -746,7 +770,38 @@ function renderNuevaVenta(){
       <div class="form-group"><label>Armazón — marca</label>
         <select id="f-marca-armazon">${state.marcas.map(m=>`<option>${m}</option>`).join('')}</select>
       </div>
-      <div class="form-group"><label>Monto vendido ($)</label><input type="number" id="f-monto" placeholder="0"></div>
+      <div class="form-group"><label>Monto vendido ($)</label><input type="number" id="f-monto" placeholder="0" oninput="recalcularSaldo()"></div>
+      <div class="form-group"><label>Forma de pago</label>
+        <select id="f-metodo-pago">
+          <option value="efectivo">Efectivo</option>
+          <option value="transferencia">Transferencia</option>
+          <option value="tarjeta_debito">Tarjeta débito</option>
+          <option value="tarjeta_credito">Tarjeta crédito</option>
+        </select>
+      </div>
+    </div>
+    <div style="margin-top:10px">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:500">
+        <input type="checkbox" id="f-tiene-seña" onchange="toggleSeña()">
+        ¿Dejó seña? (pago parcial)
+      </label>
+    </div>
+    <div id="seña-fields" style="display:none;margin-top:10px;background:var(--bg2);border-radius:8px;padding:12px 14px">
+      <div style="font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">Detalle de seña</div>
+      <div class="form-grid">
+        <div class="form-group"><label>Monto seña ($)</label><input type="number" id="f-seña-monto" placeholder="0" oninput="recalcularSaldo()"></div>
+        <div class="form-group"><label>Forma de pago seña</label>
+          <select id="f-seña-metodo">
+            <option value="efectivo">Efectivo</option>
+            <option value="transferencia">Transferencia</option>
+            <option value="tarjeta_debito">Tarjeta débito</option>
+            <option value="tarjeta_credito">Tarjeta crédito</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Saldo a cobrar al retirar</label>
+          <div id="f-saldo-display" style="font-size:20px;font-weight:700;color:var(--coral);padding-top:4px">$0</div>
+        </div>
+      </div>
     </div>
     <div style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px">
       <div style="font-size:11px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Accesorios / Insumos / Arreglos</div>
@@ -790,6 +845,18 @@ function toggleResultado(){
   const v=document.getElementById('f-resultado').value;
   document.getElementById('venta-fields').style.display=v==='venta'?'block':'none';
   document.getElementById('ppto-fields').style.display=v==='presupuesto'?'block':'none';
+}
+function toggleSeña(){
+  const checked=document.getElementById('f-tiene-seña').checked;
+  document.getElementById('seña-fields').style.display=checked?'block':'none';
+  if(checked)recalcularSaldo();
+}
+function recalcularSaldo(){
+  const total=parseFloat(document.getElementById('f-monto')?.value)||0;
+  const seña=parseFloat(document.getElementById('f-seña-monto')?.value)||0;
+  const saldo=total-seña;
+  const el=document.getElementById('f-saldo-display');
+  if(el)el.textContent='$'+Math.max(0,saldo).toLocaleString('es-AR');
 }
 
 // ====== EXTRAS (accesorios/insumos/arreglos) ======
@@ -882,6 +949,14 @@ function guardarAtencion(){
     marca_lente:resultado==='venta'?document.getElementById('f-marca-lente').value:'',
     marca_armazon:resultado==='venta'?document.getElementById('f-marca-armazon').value:'',
     monto:resultado==='venta'?parseFloat(document.getElementById('f-monto').value)||0:0,
+    metodo_pago:resultado==='venta'?document.getElementById('f-metodo-pago').value:'',
+    tiene_seña:resultado==='venta'&&document.getElementById('f-tiene-seña')?.checked||false,
+    seña_monto:resultado==='venta'&&document.getElementById('f-tiene-seña')?.checked?parseFloat(document.getElementById('f-seña-monto').value)||0:0,
+    seña_metodo:resultado==='venta'&&document.getElementById('f-tiene-seña')?.checked?document.getElementById('f-seña-metodo').value:'',
+    saldo_pendiente:resultado==='venta'&&document.getElementById('f-tiene-seña')?.checked?(parseFloat(document.getElementById('f-monto').value)||0)-(parseFloat(document.getElementById('f-seña-monto').value)||0):0,
+    saldo_estado:resultado==='venta'&&document.getElementById('f-tiene-seña')?.checked?'pendiente':'pagado',
+    saldo_metodo:'',
+    saldo_fecha_retiro:'',
     extras:resultado==='venta'&&document.getElementById('f-tiene-extra')?.value==='si'?recolectarExtras():[],
     tipo_ppto:resultado==='presupuesto'?document.getElementById('f-tipo-ppto').value:'',
     monto_ppto:resultado==='presupuesto'?parseFloat(document.getElementById('f-monto-ppto').value)||0:0,
@@ -905,6 +980,9 @@ function limpiarForm(){
   document.getElementById('venta-fields').style.display='block';
   document.getElementById('ppto-fields').style.display='none';
   document.getElementById('fid-group').style.display='none';
+  const chkSeña=document.getElementById('f-tiene-seña');
+  if(chkSeña){chkSeña.checked=false;document.getElementById('seña-fields').style.display='none';}
+
   const extrasList=document.getElementById('extras-lista');
   if(extrasList)extrasList.innerHTML='';
   const extraFields=document.getElementById('extra-fields');
@@ -956,6 +1034,27 @@ ${isAdmin?`<div style="margin-bottom:1rem">${localBtns}${vendBtns}</div>`:''}
   <div class="metric"><div class="metric-label">Presupuestos</div><div class="metric-value">${presupuestos.length}</div><div class="metric-sub">abiertos</div></div>
   <div class="metric"><div class="metric-label">Ticket prom.</div><div class="metric-value">$${ventas.length?Math.round(totalVendido/ventas.length).toLocaleString('es-AR'):0}</div><div class="metric-sub">por venta</div></div>
 </div>
+${(()=>{
+  const pendientes=data.filter(a=>a.tiene_seña&&a.saldo_estado==='pendiente').sort((a,b)=>a.fecha.localeCompare(b.fecha));
+  if(!pendientes.length)return '';
+  const METODO_LABEL={efectivo:'Efectivo',transferencia:'Transferencia',tarjeta_debito:'T. Débito',tarjeta_credito:'T. Crédito'};
+  return `<div class="card" style="border-color:var(--coral)">
+  <div class="card-title" style="color:var(--coral)">⏳ Retiros pendientes (${pendientes.length})</div>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Fecha venta</th><th>Cliente</th>${isAdmin?'<th>Vendedora</th>':''}<th>Total</th><th>Seña pagada</th><th>Saldo a cobrar</th><th>Método seña</th><th>Acción</th></tr></thead>
+    <tbody>${pendientes.map(a=>`<tr>
+      <td>${a.fecha}</td>
+      <td><b>${a.cliente}</b>${a.tel?'<br><span style="font-size:11px;color:var(--text3)">'+a.tel+'</span>':''}</td>
+      ${isAdmin?`<td><span class="badge ${badgeVendedora(a.vendedora)}">${USERS[a.vendedora]?.name||a.vendedora}</span></td>`:''}
+      <td>$${a.monto.toLocaleString('es-AR')}</td>
+      <td style="color:#2C5F4A">$${a.seña_monto.toLocaleString('es-AR')}</td>
+      <td style="color:var(--coral);font-weight:700">$${a.saldo_pendiente.toLocaleString('es-AR')}</td>
+      <td>${METODO_LABEL[a.seña_metodo]||a.seña_metodo||'—'}</td>
+      <td><button class="seg-btn seg-btn-ok" onclick="abrirModalRetiro(${a.id})">Cobrar saldo</button></td>
+    </tr>`).join('')}</tbody>
+  </table></div>
+</div>`;
+})()}
 <div class="card">
   <div class="card-title">Historial de atenciones</div>
   <div class="table-wrap">
@@ -986,7 +1085,7 @@ function renderTablaAtenciones(data){
       <td>${a.pami==='si'?'<span class="pami-tag">PAMI</span>':'-'}</td>
       <td>${badgeResultado(a.resultado)}</td>
       <td>${a.tipo_lente||a.tipo_ppto||'-'}</td>
-      <td>${a.monto?'$'+a.monto.toLocaleString('es-AR'):a.monto_ppto?'~$'+a.monto_ppto.toLocaleString('es-AR'):'-'}</td>
+      <td>${a.monto?'$'+a.monto.toLocaleString('es-AR'):a.monto_ppto?'~$'+a.monto_ppto.toLocaleString('es-AR'):'-'}${a.tiene_seña?`<br><span style="font-size:10px;color:${a.saldo_estado==='pendiente'?'var(--coral)':'#2C5F4A'}">${a.saldo_estado==='pendiente'?'⏳ Seña $'+a.seña_monto.toLocaleString('es-AR')+' / saldo $'+a.saldo_pendiente.toLocaleString('es-AR'):'✓ Retirado'}</span>`:''}</td>
       <td style="min-width:100px">${extrasHtml}</td>
       <td style="max-width:140px;color:var(--text2);font-size:12px">${a.notas||'-'}</td>
     </tr>`;}).join('')}</tbody>
@@ -1753,6 +1852,37 @@ function guardarUsuario(){
   closeModal('modal-usuario');
   showToast(_editingUser?'Contraseña actualizada':'Usuario creado');
   goTab('config');
+}
+
+// ====== SEÑAS / RETIROS ======
+let _retiroId=null;
+const METODO_LABEL_FULL={efectivo:'Efectivo',transferencia:'Transferencia',tarjeta_debito:'Tarjeta débito',tarjeta_credito:'Tarjeta crédito'};
+
+function abrirModalRetiro(id){
+  const a=state.atenciones.find(x=>x.id===id);
+  if(!a)return;
+  _retiroId=id;
+  document.getElementById('retiro-info').innerHTML=`
+    <div style="margin-bottom:6px"><b>${a.cliente}</b> · ${a.fecha}</div>
+    <div style="display:flex;gap:16px;flex-wrap:wrap;font-size:13px">
+      <span>Total: <b>$${a.monto.toLocaleString('es-AR')}</b></span>
+      <span>Seña pagada: <b style="color:#2C5F4A">$${a.seña_monto.toLocaleString('es-AR')}</b> (${METODO_LABEL_FULL[a.seña_metodo]||a.seña_metodo})</span>
+      <span>Saldo a cobrar: <b style="color:var(--coral)">$${a.saldo_pendiente.toLocaleString('es-AR')}</b></span>
+    </div>`;
+  openModal('modal-retiro');
+}
+
+function confirmarRetiro(){
+  const metodo=document.getElementById('retiro-metodo').value;
+  const idx=state.atenciones.findIndex(x=>x.id===_retiroId);
+  if(idx<0)return;
+  state.atenciones[idx].saldo_estado='pagado';
+  state.atenciones[idx].saldo_metodo=metodo;
+  state.atenciones[idx].saldo_fecha_retiro=new Date().toISOString().split('T')[0];
+  save('atenciones');
+  closeModal('modal-retiro');
+  showToast('Retiro confirmado — saldo cobrado');
+  goTab(activeTab);
 }
 
 function eliminarUsuario(username){
