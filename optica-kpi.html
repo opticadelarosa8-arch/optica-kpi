@@ -1911,9 +1911,23 @@ function semanaLabel(inicio,fin){
   return a.toLocaleDateString('es-AR',{day:'2-digit',month:'short'})+' al '+b.toLocaleDateString('es-AR',{day:'2-digit',month:'short'});
 }
 function calcTotalSistema(inicio,fin,vendedora){
-  return state.atenciones
-    .filter(a=>a.resultado==='venta'&&a.vendedora===vendedora&&a.fecha>=inicio&&a.fecha<=fin)
-    .reduce((s,a)=>s+(a.monto||0),0);
+  // Flujo de caja real:
+  // - Venta sin seña: cuenta monto completo en la fecha de venta
+  // - Venta con seña: cuenta seña en fecha de venta + saldo en fecha de retiro
+  let total=0;
+  state.atenciones.filter(a=>a.resultado==='venta'&&a.vendedora===vendedora).forEach(a=>{
+    if(!a.tiene_seña){
+      // venta normal — entra todo en la fecha de la venta
+      if(a.fecha>=inicio&&a.fecha<=fin) total+=(a.monto||0);
+    } else {
+      // seña — entra la seña en la fecha de la venta
+      if(a.fecha>=inicio&&a.fecha<=fin) total+=(a.seña_monto||0);
+      // saldo — entra en la fecha del retiro (si ya se cobró)
+      if(a.saldo_estado==='pagado'&&a.saldo_fecha_retiro>=inicio&&a.saldo_fecha_retiro<=fin)
+        total+=(a.saldo_pendiente||0);
+    }
+  });
+  return total;
 }
 
 function renderCierre(){
