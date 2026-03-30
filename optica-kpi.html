@@ -934,15 +934,13 @@ function renderVentasList(){
   // vendedoras disponibles según local seleccionado
   const vendedorasDisp=Object.entries(USERS).filter(([,d])=>d.role==='vendedora'&&(ventasLocal==='todas'||(d.local||'')===ventasLocal));
 
-  const btnStyle=(activo)=>`padding:5px 14px;border-radius:20px;border:1.5px solid var(--primary);font-size:12px;font-family:var(--font-body);cursor:pointer;background:${activo?'var(--primary)':'transparent'};color:${activo?'white':'var(--primary)'}`;
-
-  const localBtns=isAdmin?`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
-    ${['todas',...Object.keys(LOCALES)].map(k=>`<button onclick="setVentasLocal('${k}')" style="${btnStyle(ventasLocal===k)}">${k==='todas'?'General':LOCALES[k]}</button>`).join('')}
+  const localBtns=isAdmin?`<div class="toggle-group" style="display:inline-flex;margin-bottom:8px">
+    ${['todas',...Object.keys(LOCALES)].map(k=>`<button class="toggle-btn${ventasLocal===k?' active':''}" onclick="setVentasLocal('${k}')">${k==='todas'?'General':LOCALES[k]}</button>`).join('')}
   </div>`:'';
 
-  const vendBtns=isAdmin?`<div style="display:flex;gap:6px;flex-wrap:wrap">
-    <button onclick="setVentasVendedora('todas')" style="${btnStyle(ventasVendedora==='todas')}">Todos</button>
-    ${vendedorasDisp.map(([u,d])=>`<button onclick="setVentasVendedora('${u}')" style="${btnStyle(ventasVendedora===u)}">${d.name}${d.local&&LOCALES[d.local]?' · '+LOCALES[d.local]:''}</button>`).join('')}
+  const vendBtns=isAdmin&&vendedorasDisp.length?`<div class="toggle-group" style="display:inline-flex">
+    <button class="toggle-btn${ventasVendedora==='todas'?' active':''}" onclick="setVentasVendedora('todas')">Todos</button>
+    ${vendedorasDisp.map(([u,d])=>`<button class="toggle-btn${ventasVendedora===u?' active':''}" onclick="setVentasVendedora('${u}')">${d.name}${d.local&&LOCALES[d.local]?' · '+LOCALES[d.local]:''}</button>`).join('')}
   </div>`:'';
 
   return `
@@ -1413,8 +1411,8 @@ function renderDashboard(){
   const totalErr=prod.filter(p=>p.error).length;
   const tasaErr=prod.length?((totalErr/prod.length)*100).toFixed(1):0;
 
-  const localBtns=`<div style="display:flex;gap:6px;flex-wrap:wrap">
-    ${['todas',...Object.keys(LOCALES)].map(k=>`<button onclick="setDashLocal('${k}')" style="padding:5px 14px;border-radius:20px;border:1.5px solid var(--primary);font-size:12px;font-family:var(--font-body);cursor:pointer;background:${dashLocal===k?'var(--primary)':'transparent'};color:${dashLocal===k?'white':'var(--primary)'}">${k==='todas'?'General':LOCALES[k]}</button>`).join('')}
+  const localBtns=`<div class="toggle-group" style="display:inline-flex">
+    ${['todas',...Object.keys(LOCALES)].map(k=>`<button class="toggle-btn${dashLocal===k?' active':''}" onclick="setDashLocal('${k}')">${k==='todas'?'General':LOCALES[k]}</button>`).join('')}
   </div>`;
 
   // ---- Resumen de accesorios/insumos/arreglos ----
@@ -1935,8 +1933,8 @@ function renderCierresAdmin(){
     </tr>`;
   }).join(''):`<tr><td colspan="8" style="color:var(--text3);font-size:13px">Sin cierres registrados aún.</td></tr>`;
 
-  const localBtnsCierres=`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:1rem">
-    ${['todas',...Object.keys(LOCALES)].map(k=>`<button onclick="setCierresLocal('${k}')" style="padding:5px 14px;border-radius:20px;border:1.5px solid var(--primary);font-size:12px;font-family:var(--font-body);cursor:pointer;background:${cierresLocalFiltro===k?'var(--primary)':'transparent'};color:${cierresLocalFiltro===k?'white':'var(--primary)'}">${k==='todas'?'General':LOCALES[k]}</button>`).join('')}
+  const localBtnsCierres=`<div class="toggle-group" style="display:inline-flex;margin-bottom:1rem">
+    ${['todas',...Object.keys(LOCALES)].map(k=>`<button class="toggle-btn${cierresLocalFiltro===k?' active':''}" onclick="setCierresLocal('${k}')">${k==='todas'?'General':LOCALES[k]}</button>`).join('')}
   </div>`;
 
   return `
